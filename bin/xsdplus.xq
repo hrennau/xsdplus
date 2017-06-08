@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2017-06-08T20:47:44.636+02:00 
+ : @version 2017-06-08T23:56:43.546+02:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -196,8 +196,8 @@ declare variable $toolScheme :=
     <operation name="frequencyTree" type="item()" func="frequencyTreeOp" mod="frequencyTreeWriter.xqm" namespace="http://www.ttools.org/xitems/ns/xquery-functions">
       <param name="doc" type="docFOX" sep="WS" pgroup="input"/>
       <param name="dcat" type="docCAT*" sep="WS" pgroup="input"/>
-      <param name="format" type="xs:string?" fct_values="tree, treesheet" default="treesheet"/>
-      <param name="rootElem" type="xs:NCName"/>
+      <param name="format" type="xs:string?" fct_values="xml, treesheet" default="treesheet"/>
+      <param name="rootElem" type="xs:NCName?"/>
       <param name="xsd" type="docFOX*" sep="SC" fct_minDocCount="1"/>
       <param name="colRhs" type="xs:integer" default="60"/>
       <pgroup name="input" minOccurs="1"/>
@@ -296,10 +296,10 @@ declare variable $toolScheme :=
     <operation name="valuesTree" type="item()" func="valuesTreeOp" mod="valuesTreeWriter.xqm" namespace="http://www.ttools.org/xitems/ns/xquery-functions">
       <param name="doc" type="docFOX" sep="WS" pgroup="input"/>
       <param name="dcat" type="docCAT*" sep="WS" pgroup="input"/>
-      <param name="format" type="xs:string?" fct_values="tree, treesheet" default="treesheet"/>
-      <param name="rootElem" type="xs:NCName"/>
+      <param name="format" type="xs:string?" fct_values="xml, treesheet" default="treesheet"/>
+      <param name="rootElem" type="xs:NCName?"/>
       <param name="inamesTokenize" type="nameFilter?"/>
-      <param name="nterms" type="xs:integer?" default="3"/>
+      <param name="nterms" type="xs:integer?" default="5"/>
       <param name="xsd" type="docFOX*" sep="SC" fct_minDocCount="1"/>
       <param name="colRhs" type="xs:integer" default="60"/>
       <pgroup name="input" minOccurs="1"/>

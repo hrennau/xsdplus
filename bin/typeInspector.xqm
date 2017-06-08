@@ -77,7 +77,7 @@ declare function f:tgetTypeDerivationKind($type as element()?) {
  : The variant identifies simple vs. complex type, plus the derivation kind in 
  : case of a simple type and simple/complex/empty content in case of a complex type. 
  : The codes are:
- :    sr - simple type, restriction
+ :    sa - simple type, atomic
  :    sl - simple type, list
  :    su - simple type, union
  :    cs - complex type, simple content
@@ -103,7 +103,7 @@ declare function f:getTypeVariant($name as xs:QName,
  : The variant identifies simple vs. complex type, plus the derivation kind in 
  : case of a simple type and simple/complex/empty content in case of a complex type. 
  : The codes are:
- :    sr - simple type, restriction
+ :    sa - simple type, atomic
  :    sl - simple type, list
  :    su - simple type, union
  :    cs - complex type, simple content
@@ -120,7 +120,7 @@ declare function f:tgetTypeVariant($type as element()?,
     if (not($type)) then () else
     
     if ($type/self::xs:simpleType) then
-        if ($type/xs:restriction) then 'sr'
+        if ($type/xs:restriction) then 'sa'
         else if ($type/xs:list) then 'sl'
         else if ($type/xs:union) then 'su'
         else error()

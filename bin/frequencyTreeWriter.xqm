@@ -11,8 +11,8 @@
       <operation name="frequencyTree" type="item()" func="frequencyTreeOp">     
          <param name="doc" type="docFOX" sep="WS" pgroup="input"/>
          <param name="dcat" type="docCAT*" sep="WS" pgroup="input"/>
-         <param name="format" type="xs:string?" fct_values="tree, treesheet" default="treesheet"/>
-         <param name="rootElem" type="xs:NCName"/>
+         <param name="format" type="xs:string?" fct_values="xml, treesheet" default="treesheet"/>
+         <param name="rootElem" type="xs:NCName?"/>
          <param name="xsd" type="docFOX*" sep="SC" fct_minDocCount="1"/>
          <param name="colRhs" type="xs:integer" default="60"/>         
          <pgroup name="input" minOccurs="1"/>         
@@ -152,7 +152,7 @@ declare function f:frequencyTree($docs as node()+,
         }</z:locationTrees>
     return
         (: format = XML :)
-        if ($format eq 'tree') then $report
+        if ($format eq 'xml') then $report
         
         (: format = treesheet :)
         else 
