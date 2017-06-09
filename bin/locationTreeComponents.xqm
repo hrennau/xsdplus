@@ -12,7 +12,7 @@
          <param name="enames" type="nameFilter?" pgroup="comps"/> 
          <param name="tnames" type="nameFilter?" pgroup="comps"/>         
          <param name="gnames" type="nameFilter?" pgroup="comps"/>         
-         <param name="global" type="xs:boolean?" default="false"/>        
+         <param name="global" type="xs:boolean?" default="true"/>        
          <param name="expandBaseType" type="xs:boolean?" default="true"/>
          <param name="expandGroups" type="xs:boolean?" default="true"/>         
          <param name="stypeTrees" type="xs:boolean?" default="true"/>         

@@ -12,7 +12,7 @@
          <param name="enames" type="nameFilter?" pgroup="comps"/> 
          <param name="tnames" type="nameFilter?" pgroup="comps"/>         
          <param name="gnames" type="nameFilter?" pgroup="comps"/>         
-         <param name="global" type="xs:boolean?" default="false"/>         
+         <param name="global" type="xs:boolean?" default="true"/>         
          <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
          <param name="sortAtts" type="xs:boolean?" default="false"/>
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
@@ -45,8 +45,12 @@ declare variable $f:TSHEET_INDENT_UNIT := '. ';
 declare variable $f:TSHEET_FILLER_SIMPLE_ITEMS := 
     string-join(for $i in 1 to 100 return '... ', '');
 declare variable $f:TSHEET_FILLER_COMPLEX_ITEMS := 
+    string-join(for $i in 1 to 100 return '... ', '');
+    
+(:    
+declare variable $f:TSHEET_FILLER_COMPLEX_ITEMS := 
     string-join(for $i in 1 to 100 return '~~~ ', '');
-
+:)
 (:
  : ============================================================================
  :
@@ -125,7 +129,7 @@ declare function f:reportAnno($n as node(), $options as element(options)?, $lang
                                     return
                                         $docums[@xml:lang eq $langs[1]]
     return 
-        if (not($docum)) then () else string-join($docum, ' ### ') ! normalize-space(.)
+        if (not($docum)) then () else 'anno: ' || string-join($docum, ' ### ') ! normalize-space(.)
 };
 
 (:~

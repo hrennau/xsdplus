@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2017-06-08T23:56:43.546+02:00 
+ : @version 2017-06-09T11:08:54.087+02:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -117,7 +117,7 @@ declare variable $toolScheme :=
       <param name="enames" type="nameFilter?" pgroup="comps"/>
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
-      <param name="global" type="xs:boolean?" default="false"/>
+      <param name="global" type="xs:boolean?" default="true"/>
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
       <pgroup name="in" minOccurs="1"/>
@@ -223,7 +223,7 @@ declare variable $toolScheme :=
       <param name="enames" type="nameFilter?" pgroup="comps"/>
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
-      <param name="global" type="xs:boolean?" default="false"/>
+      <param name="global" type="xs:boolean?" default="true"/>
       <param name="expandBaseType" type="xs:boolean?" default="true"/>
       <param name="expandGroups" type="xs:boolean?" default="true"/>
       <param name="stypeTrees" type="xs:boolean?" default="true"/>
@@ -237,7 +237,7 @@ declare variable $toolScheme :=
       <param name="enames" type="nameFilter?" pgroup="comps"/>
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
-      <param name="global" type="xs:boolean?" default="false"/>
+      <param name="global" type="xs:boolean?" default="true"/>
       <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
       <param name="stypeTrees" type="xs:boolean?" default="true"/>
       <param name="annos" type="xs:boolean?" default="true"/>
@@ -282,7 +282,7 @@ declare variable $toolScheme :=
       <param name="enames" type="nameFilter?" pgroup="comps"/>
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
-      <param name="global" type="xs:boolean?" default="false"/>
+      <param name="global" type="xs:boolean?" default="true"/>
       <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
       <param name="sortAtts" type="xs:boolean?" default="false"/>
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
@@ -315,7 +315,7 @@ declare variable $toolScheme :=
       <param name="enames" type="nameFilter?" pgroup="comps"/>
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
-      <param name="global" type="xs:boolean?" default="false"/>
+      <param name="global" type="xs:boolean?" default="true"/>
       <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
       <param name="sortAtts" type="xs:boolean?" default="false"/>
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>

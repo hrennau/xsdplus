@@ -68,7 +68,6 @@ declare namespace z="http://www.xsdplus.org/ns/structure";
  :)
 declare function f:getComponentName($comp as element())                        
         as xs:QName {   
-    file:write('DEBUG1.xml', $comp),        
     if ($comp/@ref) then resolve-QName($comp/@ref, $comp)
     else if ($comp/self::xs:element) then f:getElemComponentName($comp)
     else if ($comp/self::xs:attribute) then f:getAttComponentName($comp)
