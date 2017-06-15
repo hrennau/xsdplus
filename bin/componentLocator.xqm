@@ -6,6 +6,17 @@
  : -------------------------------------------------------------------------
  :)
 
+(:~@operations
+   <operations>
+      <operation name="locators" type="item()" func="locatorsOp">     
+         <param name="xsd" type="docFOX*" sep="SC" pgroup="in"/>
+         <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
+         <param name="enames" type="nameFilter?"/>
+         <param name="addFname" type="xs:boolean?" default="false"/>         
+         <pgroup name="in" minOccurs="1"/>
+      </operation>
+    </operations>  
+:)  
 
 module namespace f="http://www.xsdplus.org/ns/xquery-functions";
 
@@ -30,7 +41,39 @@ declare variable $f:USE_OLD_COMPONENT_LOCATORS as xs:boolean := false();
  : ============================================================================
  :)
  
- (:
+ (:~
+ : Implements operation 'locators'.
+ :)
+declare function f:locatorsOp($request as element())
+        as element() {
+    let $schemas as element(xs:schema)* := app:getSchemas($request)        
+    let $fname := tt:getParam($request, 'addFname')
+    let $enames := tt:getParam($request, 'enames')
+    
+    let $comps := 
+        if (not(($enames, ()))) then $schemas/descendant-or-self::* else (
+            if (not($enames)) then () else f:getElems($request, $schemas),
+            ()
+        )        
+    let $nsmap := app:getTnsPrefixMap($schemas)        
+    let $locs := 
+        for $comp in $comps
+        let $loc := app:getComponentLocator($comp, $nsmap, $schemas)
+        let $check := $comp is app:resolveComponentLocator($loc, $nsmap, $schemas)
+        return
+            <z:loc value="{$loc}">{
+                if (not($fname)) then () else attribute fname {$comp/root()/replace(document-uri(.), '.*/', '')},
+                if ($check) then () else attribute ERROR {'CANNOT-RESOLVE'}
+            }</z:loc>
+    return 
+        <z:locs count="{count($locs)}">{           
+            for $loc in $locs
+            order by $loc/@value 
+            return $loc          
+        }</z:locs>
+};
+
+(:
  : ============================================================================
  :
  :     p u b l i c    f u n c t i o n s
@@ -349,7 +392,7 @@ declare function f:_resolveComponentLocatorRC($context as node()?,
                     return
                         if ($try) then $try
                         else
-                            $container/xs:attribute/@ref[resolve-QName(., ..) eq $qname]
+                            $container/xs:attribute[@ref/resolve-QName(., ..) eq $qname]
                         
                 (: component != compositor, element or attribute declaration :)                        
                 else if (starts-with($step, 'xs:')) then
@@ -371,7 +414,7 @@ declare function f:_resolveComponentLocatorRC($context as node()?,
                             let $try := $container/xs:element[@name eq $lname]
                             return
                                 if ($try) then $try
-                                else $container/xs:element/@ref[resolve-QName(., ..) eq $qname][$index]
+                                else $container/xs:element[@ref/resolve-QName(., ..) eq $qname][$index]
     return
         if (not($newContext)) then ()
         else if (not($rest)) then $newContext

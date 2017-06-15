@@ -58,6 +58,7 @@ declare function f:getTnsPrefixMap($schemas as element(xs:schema)*)
                attribute prefix {$prefix},
                attribute uri {$tns}
             }</z:ns>,
+         <z:ns prefix="xml" uri="http://www.w3.org/XML/1998/namespace"/>,
          <z:ns prefix="xs" uri="http://www.w3.org/2001/XMLSchema"/>,
          <z:ns prefix="z" uri="http://www.xsdplus.org/ns/structure"/>
       }</z:nsMap>

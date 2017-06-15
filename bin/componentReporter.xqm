@@ -71,14 +71,6 @@
          <param name="format" type="xs:string?" default="name" fct_values="decl, name"/>         
          <pgroup name="in" minOccurs="1"/>
       </operation>
-      <operation name="locators" type="item()" func="getLocators">     
-         <param name="xsd" type="docFOX*" sep="SC" pgroup="in"/>
-         <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
-         <param name="enames" type="nameFilter?"/>
-         <param name="addFname" type="xs:boolean?" default="false"/>         
-         <pgroup name="in" minOccurs="1"/>
-      </operation>
-      
     </operations>  
 :)  
 
@@ -251,38 +243,6 @@ declare function f:reportAttGroups($request as element())
             $compsReport
         }</z:attGroups>
 };        
-
-(:~
- : Returns XSD component locators.
- :)
-declare function f:getLocators($request as element())
-        as element() {
-    let $schemas as element(xs:schema)* := app:getSchemas($request)        
-    let $fname := tt:getParam($request, 'addFname')
-    let $enames := tt:getParam($request, 'enames')
-    
-    let $comps := 
-        if (not(($enames, ()))) then $schemas/descendant-or-self::* else (
-            if (not($enames)) then () else f:getElems($request, $schemas),
-            ()
-        )        
-    let $nsmap := app:getTnsPrefixMap($schemas)        
-    let $locs := 
-        for $comp in $comps
-        let $loc := app:getComponentLocator($comp, $nsmap, $schemas)
-        let $check := $comp is app:resolveComponentLocator($loc, $nsmap, $schemas)
-        return
-            <z:loc value="{$loc}">{
-                if (not($fname)) then () else attribute fname {$comp/root()/replace(document-uri(.), '.*/', '')},
-                if ($check) then () else attribute ERROR {'CANNOT-RESOLVE'}
-            }</z:loc>
-    return 
-        <z:locs count="{count($locs)}">{           
-            for $loc in $locs
-            order by $loc/@value 
-            return $loc          
-        }</z:locs>
-};
 
 (:
  : ============================================================================

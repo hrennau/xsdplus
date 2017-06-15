@@ -140,14 +140,23 @@ declare function f:deps($comp as element(),
             'atts': $comp/self::attribute
                 /QName(ancestor::xs:schema/@targetNamespace, @name)            
         }
+    let $explicitDeps := f:_depsRC($directDeps, $analyzedSoFar, $schemas)    
+    let $allDeps := $explicitDeps
     return
-        f:_depsRC($directDeps, $analyzedSoFar, $schemas)
+        $allDeps
 };
 
 (:~
  : Returns for a given schema components (element or attribute declarations, 
  : type or group definitions) all direct dependencies on other components. 
- : Each dependency is provided as a QName.
+ : Dependencies are grouped by component kind and represented by component
+ : QName.
+ :
+ : Note. The term "direct dependencies" means the dependencies caused
+ : by references occurring in the component itself, rather than in the
+ : result of recursively resolving another dependence. Every direct 
+ : dependence is represented by one of these attributes:
+ :     @ref, @type, @base, @itemType, @memberTypes. 
  :
  : @param comp a schema component
  : @param schemas the schema elements currently considered

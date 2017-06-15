@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2017-06-09T11:08:54.087+02:00 
+ : @version 2017-06-15T10:18:56.046+02:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -19,6 +19,7 @@ import module namespace a1="http://www.xsdplus.org/ns/xquery-functions" at
     "baseTreeReporter.xqm",
     "baseTreeWriter.xqm",
     "componentDependencies.xqm",
+    "componentLocator.xqm",
     "componentReporter.xqm",
     "jsonSchema.xqm",
     "locationTreeComponents.xqm",
@@ -26,6 +27,7 @@ import module namespace a1="http://www.xsdplus.org/ns/xquery-functions" at
     "pathDictionary.xqm",
     "schemaLoader.xqm",
     "simpleTypeInfo.xqm",
+    "substitutionGroups.xqm",
     "treesheetWriter.xqm",
     "viewBaseTreeWriter.xqm",
     "viewTreeWriter.xqm";
@@ -123,6 +125,13 @@ declare variable $toolScheme :=
       <pgroup name="in" minOccurs="1"/>
       <pgroup name="comps" maxOccurs="1"/>
     </operation>
+    <operation name="locators" type="item()" func="locatorsOp" mod="componentLocator.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
+      <param name="xsd" type="docFOX*" sep="SC" pgroup="in"/>
+      <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
+      <param name="enames" type="nameFilter?"/>
+      <param name="addFname" type="xs:boolean?" default="false"/>
+      <pgroup name="in" minOccurs="1"/>
+    </operation>
     <operation name="elem" type="item()" func="reportElems" mod="componentReporter.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in"/>
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
@@ -184,13 +193,6 @@ declare variable $toolScheme :=
       <param name="addFname" type="xs:boolean?" default="false"/>
       <param name="noref" type="xs:boolean?" default="false"/>
       <param name="format" type="xs:string?" default="name" fct_values="decl, name"/>
-      <pgroup name="in" minOccurs="1"/>
-    </operation>
-    <operation name="locators" type="item()" func="getLocators" mod="componentReporter.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
-      <param name="xsd" type="docFOX*" sep="SC" pgroup="in"/>
-      <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
-      <param name="enames" type="nameFilter?"/>
-      <param name="addFname" type="xs:boolean?" default="false"/>
       <pgroup name="in" minOccurs="1"/>
     </operation>
     <operation name="frequencyTree" type="item()" func="frequencyTreeOp" mod="frequencyTreeWriter.xqm" namespace="http://www.ttools.org/xitems/ns/xquery-functions">
@@ -277,6 +279,16 @@ declare variable $toolScheme :=
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
       <pgroup name="in" minOccurs="1"/>
       <pgroup name="comps" maxOccurs="1"/>
+    </operation>
+    <operation name="sgroups" type="node()" func="sgroupsOp" mod="substitutionGroups.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
+      <param name="withMembers" type="xs:boolean?" default="false"/>
+      <param name="snames" type="nameFilter?"/>
+      <param name="snspaces" type="nameFilter?"/>
+      <param name="mnames" type="nameFilter?"/>
+      <param name="mnspaces" type="nameFilter?"/>
+      <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
+      <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
+      <pgroup name="in" minOccurs="1"/>
     </operation>
     <operation name="treesheet" type="xs:string" func="treesheetOp" mod="treesheetWriter.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
       <param name="enames" type="nameFilter?" pgroup="comps"/>
@@ -515,6 +527,17 @@ declare function m:execOperation_deps($request as element())
 };
      
 (:~
+ : Executes operation 'locators'.
+ :
+ : @param request the request element
+ : @return the operation result
+ :)
+declare function m:execOperation_locators($request as element())
+        as item() {
+    a1:locatorsOp($request)        
+};
+     
+(:~
  : Executes operation 'elem'.
  :
  : @param request the request element
@@ -567,17 +590,6 @@ declare function m:execOperation_group($request as element())
 declare function m:execOperation_agroup($request as element())
         as item() {
     a1:reportAttGroups($request)        
-};
-     
-(:~
- : Executes operation 'locators'.
- :
- : @param request the request element
- : @return the operation result
- :)
-declare function m:execOperation_locators($request as element())
-        as item() {
-    a1:getLocators($request)        
 };
      
 (:~
@@ -680,6 +692,17 @@ declare function m:execOperation_stypeDesc($request as element())
 };
      
 (:~
+ : Executes operation 'sgroups'.
+ :
+ : @param request the request element
+ : @return the operation result
+ :)
+declare function m:execOperation_sgroups($request as element())
+        as node() {
+    a1:sgroupsOp($request)        
+};
+     
+(:~
  : Executes operation 'treesheet'.
  :
  : @param request the request element
@@ -762,12 +785,12 @@ declare function m:execOperation($req as element())
         else if ($opName eq 'btreeDependencies') then m:execOperation_btreeDependencies($req)
         else if ($opName eq 'btree') then m:execOperation_btree($req)
         else if ($opName eq 'deps') then m:execOperation_deps($req)
+        else if ($opName eq 'locators') then m:execOperation_locators($req)
         else if ($opName eq 'elem') then m:execOperation_elem($req)
         else if ($opName eq 'att') then m:execOperation_att($req)
         else if ($opName eq 'type') then m:execOperation_type($req)
         else if ($opName eq 'group') then m:execOperation_group($req)
         else if ($opName eq 'agroup') then m:execOperation_agroup($req)
-        else if ($opName eq 'locators') then m:execOperation_locators($req)
         else if ($opName eq 'frequencyTree') then m:execOperation_frequencyTree($req)
         else if ($opName eq 'jschema') then m:execOperation_jschema($req)
         else if ($opName eq 'jschemas') then m:execOperation_jschemas($req)
@@ -777,6 +800,7 @@ declare function m:execOperation($req as element())
         else if ($opName eq 'load') then m:execOperation_load($req)
         else if ($opName eq 'stypeTree') then m:execOperation_stypeTree($req)
         else if ($opName eq 'stypeDesc') then m:execOperation_stypeDesc($req)
+        else if ($opName eq 'sgroups') then m:execOperation_sgroups($req)
         else if ($opName eq 'treesheet') then m:execOperation_treesheet($req)
         else if ($opName eq 'valuesTree') then m:execOperation_valuesTree($req)
         else if ($opName eq 'vbtree') then m:execOperation_vbtree($req)
