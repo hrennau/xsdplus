@@ -369,15 +369,9 @@ declare function f:lcomp_type_atts(
                         $schemas as element(xs:schema)+)
         as element(z:_attributes_)? {    
     let $atts :=  f:tfindTypeAtts($type, $schemas)
-    let $wildCard := $atts/xs:anyAttribute
+    let $wildCard := $atts/self::xs:anyAttribute
     let $wildCardDescriptor :=
-        $wildCard/
-        <z:_anyAttribute_>{
-            for $a in @* return f:lcomp_type_elemsRC($a, $options, $nsmap, $schemas),
-            for $c in node() return f:lcomp_type_elemsRC($c, $options, $nsmap, $schemas)            
-        }</z:_anyAttribute_>
-        
-    
+        $wildCard/f:lcomp_type_anyAtt(., $options, $nsmap, $schemas)
     return if (empty($atts)) then () else
     
     <z:_attributes_>{
@@ -408,6 +402,29 @@ declare function f:lcomp_type_atts(
         $wildCardDescriptor
     }</z:_attributes_>
 };        
+
+(:~
+ : Returns a location tree element representing an attribute wildcard.
+ :
+ : @param anyAtt an attribute wildcard schema component
+ : @param options an element representing processing options; 
+ :     not evaluated by this function
+ : @param nsmap normalized bindings of namespace URIs to prefixes
+ : @param schemas the schema elements currently considered
+ :) 
+declare function f:lcomp_type_anyAtt(
+                        $anyAtt as element(xs:anyAttribute),
+                        $options as element(options),
+                        $nsmap as element(),
+                        $schemas as element(xs:schema)+)
+        as element(z:_anyAttribute_)? {
+        <z:_anyAttribute_>{
+            $anyAtt/@namespace/attribute z:namespace {.},
+            $anyAtt/@processContents/attribute z:processContents {.},
+            $anyAtt/@*,            
+            for $c in $anyAtt/node() return f:lcomp_type_elemsRC($c, $options, $nsmap, $schemas)            
+        }</z:_anyAttribute_>
+};
 
 (:~
  : Returns location tree elements representing the element declarations and 
@@ -451,6 +468,7 @@ declare function f:lcomp_type_elemsRC($n as node(),
     typeswitch($n)  
 
     case element(xs:attribute) return ()    
+    case element(xs:anyAttribute) return ()    
     case element(xs:attributeGroup) return ()    
     case element(xs:simpleContent) return ()    
     case comment() return ()    

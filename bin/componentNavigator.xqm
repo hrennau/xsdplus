@@ -693,6 +693,8 @@ declare function f:tfindTypeAttForAttName($type as element(xs:complexType)?,
  : that is, attribute declarations corresponding to attributes of the type owning
  : element itself.
  :
+ : Returns 'xs:attribute' elements and/or 'xs:anyAttribute' elements.
+ :
  : @param type the type definition
  : @param schemas the schema elements currently considered
  : @return the attribute declarations
@@ -707,13 +709,14 @@ declare function f:tfindTypeAtts($type as element(xs:complexType)?,
       $type)[1]
 
    let $atts := $container/xs:attribute[not(@use eq 'prohibited')]
+   let $anyAtt := $container/xs:anyAttribute[not(@use eq 'prohibited')]   
    let $groupAtts :=
       for $attGroupRef in $container/xs:attributeGroup
       let $attGroupName := $attGroupRef/@ref/resolve-QName(., ..)
       return
          f:findAttGroupAtts($attGroupName, $schemas)
    return
-      ($atts, $groupAtts)
+      ($atts, $anyAtt, $groupAtts)
 };
 
 (:    

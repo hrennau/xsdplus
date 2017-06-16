@@ -139,6 +139,10 @@ declare function f:sgroups($schemas as element(xs:schema)*,
     return $groups                
 };
 
+(:~
+ : Returns the names and member names of substitution groups,  
+ : optionally filtered.
+ :)
 declare function f:sgroupMembers($schemas as element(xs:schema)*,
                            $snames as element(nameFilter)?,
                            $snspaces as element(nameFilter)?,                           
