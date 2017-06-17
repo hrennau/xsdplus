@@ -349,18 +349,23 @@ declare function f:lcomp_typeContent($type as element(),
 };        
 
 (:~
- : Returns location tree elements representing the attribute declarations 
- : contained by a complex type definition. The attribute descriptors 
- : are represented by elements which are wrapped in a 'z:_attributes_' 
- : element.
+ : Returns attribute locations representing the attribute declarations 
+ : and attribute wildcards contained or referenced by a complex type 
+ : definition. Attribute locations are elements named like the 
+ : attributes which they represent, and an attribute wildcard location
+ : is a z:_anyAttribute_ element. The locations are wrapped in a 
+ : 'z:_attributes_' element.
  :
- : @param type the type definition
+ : Implementation note. This function relies on the navigation
+ : function 'tfindTypeAtts'.
+ :
+ : @param type a complex type definition
  : @param options an element representing processing options; 
  :     not evaluated by this function
  : @param nsmap normalized bindings of namespace URIs to prefixes
  : @param schemas the schema elements currently considered
- : @return a z:_attributes_ element containing attribute locations,
- :     or the empty sequence if the type does not have attributes
+ : @return a z:_attributes_ element containing attribute locations
+ :     and/or an attribute wildcard location
  :) 
 declare function f:lcomp_type_atts(
                         $type as element(xs:complexType),
@@ -368,49 +373,56 @@ declare function f:lcomp_type_atts(
                         $nsmap as element(),
                         $schemas as element(xs:schema)+)
         as element(z:_attributes_)? {    
-    let $atts :=  f:tfindTypeAtts($type, $schemas)
-    let $wildCard := $atts/self::xs:anyAttribute
-    let $wildCardDescriptor :=
-        $wildCard/f:lcomp_type_anyAtt(., $options, $nsmap, $schemas)
-    return if (empty($atts)) then () else
-    
-    <z:_attributes_>{
-        let $withStypeTrees := $options/@withStypeTrees/xs:boolean(.)
-        let $withStypeTrees := ()   (: 20170605, hjr :)
-        for $att in $atts[not(self::xs:anyAttribute)]
-        let $typeOrTypeName := app:afindAttTypeOrTypeName($att, $schemas)
-        let $name := f:getComponentName($att)
-        let $loc := f:getComponentLocator($att, $nsmap, $schemas)
-        let $nname := app:normalizeQName($name, $nsmap)
-        let $occAtt := app:getAttributeOccAtt($att)
-        let $typePropertyItems := 
-            f:lcomp_typePropertyItems($typeOrTypeName, $withStypeTrees, $nsmap, $schemas)
-        let $typePropertyAtts := $typePropertyItems[self::attribute()]
-        let $typePropertyElems := $typePropertyItems[self::element()]    
-        let $annoElem := $att/xs:annotation/f:lcomp_type_anno(., $options, $nsmap, $schemas)     
-        return
-            element {$nname} {
-                attribute z:name {$nname},
-                $occAtt,
-                $typePropertyAtts,
-                attribute z:loc {$loc},                
-                $att/@*,
-                $typePropertyElems,
-                $annoElem
-            },
+    let $typeAtts :=  f:tfindTypeAtts($type, $schemas)
+    return if (empty($typeAtts)) then () else
+
+    let $wildCard := $typeAtts/self::xs:anyAttribute
+    let $atts := $typeAtts except $wildCard
+    return    
+        <z:_attributes_>{
+            for $att in $atts
+            let $attD := 
+                if ($att/@ref) then app:rfindAtt($att/@ref, $schemas)
+                else $att            
+            let $typeOrTypeName := app:afindAttTypeOrTypeName($attD, $schemas)
+            let $name := f:getComponentName($att)
+            let $loc := f:getComponentLocator($att, $nsmap, $schemas)
+            let $nname := app:normalizeQName($name, $nsmap)
+            let $occAtt := app:getAttributeOccAtt($att)
             
-        $wildCardDescriptor
-    }</z:_attributes_>
+            (: if type is anonymous, include stype trees if supported by options :)
+            let $withStypeTrees := 
+                if (not($attD/xs:simpleType)) then ()
+                else $options/@withStypeTrees/xs:boolean(.)
+            let $typePropertyItems := 
+                f:lcomp_typePropertyItems($typeOrTypeName, $withStypeTrees, $nsmap, $schemas)
+            let $typePropertyAtts := $typePropertyItems[self::attribute()]
+            let $typePropertyElems := $typePropertyItems[self::element()]    
+            let $annoElem := $att/xs:annotation/f:lcomp_type_anno(., $options, $nsmap, $schemas)     
+            return
+                element {$nname} {
+                    attribute z:name {$nname},
+                    $occAtt,
+                    $typePropertyAtts,
+                    attribute z:loc {$loc},                
+                    $att/@*,
+                    $typePropertyElems,
+                    $annoElem
+                },            
+            $wildCard[1]/f:lcomp_type_anyAtt(., $options, $nsmap, $schemas)                
+        }</z:_attributes_>
 };        
 
 (:~
- : Returns a location tree element representing an attribute wildcard.
+ : Returns an attribute wildcard location. The location is
+ : represented by a z:_anyAttribute_ element.
  :
  : @param anyAtt an attribute wildcard schema component
  : @param options an element representing processing options; 
  :     not evaluated by this function
  : @param nsmap normalized bindings of namespace URIs to prefixes
  : @param schemas the schema elements currently considered
+ : @return an attribute wildcard location
  :) 
 declare function f:lcomp_type_anyAtt(
                         $anyAtt as element(xs:anyAttribute),
@@ -427,20 +439,20 @@ declare function f:lcomp_type_anyAtt(
 };
 
 (:~
- : Returns location tree elements representing the element declarations and 
- : compositors contained by a complex type definition.
+ : Returns element locations and compositors representing the contents
+ : of a complex type definition.
  : 
- : Compositors are represented by z:_sequence_, z:_choice_ and z:_all_ 
- : elements. Element descriptors are represented by elements with a node 
- : name equal to the normalized name of the element declaration.
+ : An element location is an element named after the elements which the 
+ : location represents. Compositors are z:_sequence_, z:_choice_ and 
+ : z:_all_ elements.
  :
  : @param type the type definition
  : @param options an element representing processing options; 
  :     not evaluated by this function
  : @param nsmap normalized bindings of namespace URIs to prefixes
  : @param schemas the schema elements currently considered
- : @return a z:_attributes_ element describing the attributes, or
- :     the empty sequence if the type does not have attributes
+ : @return element locations and compositors representing the content of
+ :     the complex type
  :) 
 declare function f:lcomp_type_elems($type as element(),
                                     $options as element(options),
@@ -452,7 +464,7 @@ declare function f:lcomp_type_elems($type as element(),
 
 (:~
  : Recursive helper function of `lcomp_type_elems`. Maps the items
- : of an element content model to location descriptor items.
+ : of an element content model to location elements and compositors.
  :
  : @param n the node to be processed recursively
  : @param nsmap normalized bindings of namespace URIs to prefixes
@@ -512,21 +524,24 @@ declare function f:lcomp_type_elemsRC($n as node(),
     
     (: an element declaration :)
     case element(xs:element) return
-        let $withStypeTrees := $options/@withStypeTrees/xs:boolean(.)
-        let $withStypeTrees := () (: 20170605, hjr :)
         let $name := app:getNormalizedComponentName($n, $nsmap)
-        let $typeName := $n/@type/resolve-QName(., ..)
-        let $anomType := $n/(xs:simpleType, xs:complexType)
-        let $anno := $n/xs:annotation
+        let $loc := app:getComponentLocator($n, $nsmap, $schemas)
+        let $elemD := 
+            if ($n/@ref) then app:rfindElem($n/@ref, $schemas)
+            else $n
+        let $anomType := $elemD/(xs:simpleType, xs:complexType)
+        let $typeName := 
+            if ($anomType) then () else $elemD/@type/resolve-QName(., ..)        
+        let $anno := ($n/xs:annotation, ($elemD except $n)/xs:annotation)
         
         (: type anonymous or builtin: preserve all type property atts; 
-           otherwise, just keep only @z:type :)
+           otherwise, keep only @z:type :)
         let $typePropertyItems :=           
             if ($anomType) then 
-                $anomType/f:lcomp_typePropertyItems(., $withStypeTrees, $nsmap, $schemas)
+                $anomType/f:lcomp_typePropertyItems(., (), $nsmap, $schemas)
             else if (namespace-uri-from-QName($typeName) eq $c:URI_XSD) then 
-                f:lcomp_typePropertyItems($typeName, $withStypeTrees, $nsmap, $schemas)
-            else f:getTypeAtt($n, $nsmap)
+                f:lcomp_typePropertyItems($typeName, (), $nsmap, $schemas)
+            else f:getTypeAtt($elemD, $nsmap)
         let $typePropertyAtts := $typePropertyItems[self::attribute()]
         let $typePropertyElems := $typePropertyItems[self::element()]
         
@@ -534,21 +549,30 @@ declare function f:lcomp_type_elemsRC($n as node(),
         let $infoAtts := 
             let $nameAtt := attribute z:name {$name}
             let $occAtt := app:getOccAtt($n)  
-            let $locAtt := attribute z:loc {app:getComponentLocator($n, $nsmap, $schemas)}
-            let $xsAtts := for $a in $n/@* return f:lcomp_type_elemsRC($a, $options, $nsmap, $schemas)
+            let $abstractAtt :=
+                if (($n, $elemD)/@abstract eq 'true') then 
+                    attribute z:abstract {'true'}
+                else ()
+            let $locAtt := attribute z:loc {$loc}
+            let $xsAtts := 
+                for $a in ($n|$elemD)/@* 
+                return f:lcomp_type_elemsRC($a, $options, $nsmap, $schemas)
             return (
                 $nameAtt,
                 $occAtt,
+                $abstractAtt, 
                 $typePropertyAtts,
                 $locAtt,            
                 $xsAtts
             )
         
         (: contents of anonymous type :)
-        let $typeContent := $anomType/f:lcomp_typeContent(., $options, $nsmap, $schemas)/node()
+        let $typeContent := 
+            $anomType/f:lcomp_typeContent(., $options, $nsmap, $schemas)/node()
         
         (: annotation :)
-        let $annoElem := $anno/f:lcomp_type_anno(., $options, $nsmap, $schemas)
+        let $annoElem := 
+            $anno/f:lcomp_type_anno(., $options, $nsmap, $schemas)
         
         (: compose content :)
         let $content_atts := 

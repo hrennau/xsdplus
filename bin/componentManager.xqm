@@ -81,9 +81,9 @@ declare function f:getComponentName($comp as element())
 };
 
 (:~
- : Returns the normalized name of a schema component. See `getComponentName` for
- : the rules how a component name is determined. See `normalizeQName` for details
- : about QName normalization.
+ : Returns the normalized name of a schema component. See `getComponentName` 
+ : for the rules how a component name is determined. See `normalizeQName` 
+ : for details about QName normalization.
  :
  : @param comp the schema component
  : @param nsmap normalized bindings of namespace URIs to prefixes

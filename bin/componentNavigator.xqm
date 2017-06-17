@@ -308,7 +308,8 @@ declare function f:findTypeAttForAttName($typeName as xs:QName,
 :)
 
 (:~
- : Finds the attribute declarations contained or referenced by a type definition.
+ : Finds the attribute declarations contained or referenced by a type definition,
+ : including the contents of referenced attribute groups, recursively resolved.
  : The type is identified by its name. Base types are ignored unless "alsoInherited" 
  : is true.
  :
@@ -316,9 +317,9 @@ declare function f:findTypeAttForAttName($typeName as xs:QName,
  : declarations corresponding to attributes of the type owning element itself.
  :
  : @param typeName the type name
- : @param alsoInherited if true, attributes of base types are also considered
+ : @param alsoInherited if true, attributes of base types are also returned
  : @param schemas the schema elements currently considered
- : @return the attribute declarations
+ : @return attribute declarations and/or attribute wildcards
  :)
 declare function f:findTypeAtts($typeName as xs:QName, 
                                 $alsoInherited as xs:boolean?, 
@@ -688,16 +689,17 @@ declare function f:tfindTypeAttForAttName($type as element(xs:complexType)?,
     t f i n d T y p e A t t s    
 :)
 (:~
- : Finds the attribute declarations contained or referenced by a type definition.
- : Base types are ignored. Only top level attribute declarations are considered, 
- : that is, attribute declarations corresponding to attributes of the type owning
- : element itself.
+ : Finds the attribute declarations contained or referenced by a type definition,
+ : including the contents of referenced attribute groups, recursively resolved.
+ : Base types are ignored unless "alsoInherited" is true.
  :
- : Returns 'xs:attribute' elements and/or 'xs:anyAttribute' elements.
+ : Only top level attribute declarations are considered, that is, attribute
+ : declarations corresponding to attributes of the type owning element itself.
  :
  : @param type the type definition
+ : @param alsoInherited if true, attributes of base types are also returned
  : @param schemas the schema elements currently considered
- : @return the attribute declarations
+ : @return attribute declarations and/or attribute wildcards
  :)
 declare function f:tfindTypeAtts($type as element(xs:complexType)?, 
                                  $schemas as element(xs:schema)+) 
@@ -1136,28 +1138,30 @@ declare function f:tfindTypeUsingItems(
     a f i n d A t t T y p e O r T y p e N a m e    
 :)
 (:~
- : Returns for given attribute declarations the type
- : definitions and/or type names. Built-in types are 
- : represented by type names, user-defined types
- : by the type definitions.
+ : Returns for a given attribute declaration the type
+ : definition or type name. If the type is built-in, the
+ : type name is returned, otherwise the type definition.
  :
- : @param atts the attribute declarations
+ : @param att the attribute declaration
  : @param schemas the schema elements currently considered
- : @return the type definitions and/or type names
+ : @return the type definition or type name
  :) 
 declare function f:afindAttTypeOrTypeName(
-                        $atts as element(xs:attribute)*, 
+                        $att as element(xs:attribute)?, 
                         $schemas as element(xs:schema)+) 
         as item()* {
         
-    if (empty($atts)) then () else
+    if (empty($att)) then () else
 
-    let $typesOrTypeNames :=
-        for $att in $atts
-        let $typeOrTypeName := f:rfindTypeOrTypeName($att/@type, $schemas)
+    let $att := if ($att/@ref) then f:rfindAtt($att/@ref, $schemas) else $att        
+    let $typeOrTypeName :=
+        let $try := f:rfindTypeOrTypeName($att/@type, $schemas)
         return
-            if (empty($typeOrTypeName)) then $att/xs:simpleType
-            else $typeOrTypeName
+            if (empty($try)) then $att/xs:simpleType
+            else $try
+    return
+        $typeOrTypeName
+(:        
     let $typeNames := 
         for $n in distinct-values($typesOrTypeNames[. instance of xs:anyAtomicType])
         order by lower-case(string($n))
@@ -1165,6 +1169,7 @@ declare function f:afindAttTypeOrTypeName(
     let $typeDefs := $typesOrTypeNames[. instance of node()]/.        
     return
         ($typeNames, $typeDefs)
+:)        
 };
 
 (:~
@@ -1219,12 +1224,19 @@ declare function f:efindElemType($elem as element(xs:element)?,
         else f:rfindType($useElem/@type, $schemas)
 };
 
-(:    e f i n d E l e m T y p e Name    :)
-
 (:    e f i n d E l e m T y p e O r T y p e N a m e    :)
 
+(:~
+ : Returns for a given element declaration the type
+ : definition or type name. If the type is built-in, the
+ : type name is returned, otherwise the type definition.
+ :
+ : @param elem the element declaration
+ : @param schemas the schema elements currently considered
+ : @return the type definition or type name
+ :) 
 declare function f:efindElemTypeOrTypeName($elem as element(xs:element)?, 
-                                            $schemas as element(xs:schema)+) 
+                                           $schemas as element(xs:schema)+) 
       as item()? {
    if (empty($elem)) then () else
 
