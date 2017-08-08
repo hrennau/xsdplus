@@ -767,6 +767,10 @@ declare function f:_tfindTypeContentTypeOrTypeNameRC(
                         $type as element()?, 
                         $schemas as element(xs:schema)+) 
       as item()? {
+    let $explicit := $type/xs:simpleContent/*/xs:simpleType
+    return
+        if ($explicit) then $explicit else
+        
     let $base := f:tfindTypeBaseTypeOrTypeName($type, $schemas)
     return
         if ($base instance of xs:QName) then $base

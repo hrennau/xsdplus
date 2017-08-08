@@ -32,6 +32,7 @@ declare function f:expandTypeComps($typeComps as element()*)
         let $typeDict :=
             map:merge(
                 for $typeComp in $typeComps
+                (: let $DUMMY := trace($typeComp, 'TYPE_COMP: ') :)
                 let $name := $typeComp/z:typeContent/@z:type/string()                                       
                 return map:entry($name, $typeComp)
             )

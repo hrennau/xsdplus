@@ -114,6 +114,13 @@ declare function f:sgroupsOp($request as element())
 
 (:~
  : Returns the names of substitution groups, optionally filtered.
+ :
+ : @param schemas the schema elements currently considered
+ : @param snames a filter to be applied to substitution group names
+ : @param snspaces a filter to be applied to substitution group namespaces
+ : @param mnames a filter to be applied to substitution group member names
+ : @param mnspaces a filter to be applied to substitution group member namespaces
+ : @return a list of qualified substitution group names
  :)
 declare function f:sgroups($schemas as element(xs:schema)*,
                            $snames as element(nameFilter)?,
@@ -139,16 +146,28 @@ declare function f:sgroups($schemas as element(xs:schema)*,
     return $groups                
 };
 
+declare function f:sgroupMembers($schemas as element(xs:schema)*)                           
+        as map(xs:QName, xs:QName+) {
+    f:sgroupMembers($schemas, (), (), (), ())        
+};        
+
 (:~
- : Returns the names and member names of substitution groups,  
- : optionally filtered.
- :)
+ : Returns the names and member names of substitution groups.  
+ : Groups and group members are optionally filtered.
+ :
+ : @param schemas the schema elements currently considered
+ : @param snames a filter to be applied to substitution group names
+ : @param snspaces a filter to be applied to substitution group namespaces
+ : @param mnames a filter to be applied to substitution group member names
+ : @param mnspaces a filter to be applied to substitution group member namespaces
+ : @return a map associating qualified group names with lists of qualified member names
+ :) 
 declare function f:sgroupMembers($schemas as element(xs:schema)*,
                            $snames as element(nameFilter)?,
                            $snspaces as element(nameFilter)?,                           
                            $mnames as element(nameFilter)?,
                            $mnspaces as element(nameFilter)?)                           
-        as map(*) {
+        as map(xs:QName, xs:QName+) {
     (: map: member name => group name(s) :)
     let $allMembers :=
         map:merge(

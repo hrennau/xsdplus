@@ -103,12 +103,16 @@ declare function f:lcompsOp($request as element())
  : Returns the location tree components of which a set of schema components 
  : is composed. The schema components are either element declarations, or type 
  : definitions, or group definitions. They are selected by a name filter.
+ : If no name filter is specified, the set of schema components consists of
+ : all global element declarations.
  :
  : @param enames a name filter selecting element declarations
  : @param tnames a name filter selecting type declarations
  : @param gnames a name filter selecting group declarations
  : @param global if true, element names are matched only against top-level
  :     element declarations 
+ : @param options options controlling the processing
+ :        _TODO_ add documentation
  : @param expandBaseType if true, base type references are expanded, so that
  :     full type content is represented
  : @param expandGroups if true, group components are expanded by resolving
@@ -135,8 +139,8 @@ declare function f:lcomps($enames as element(nameFilter)*,
         else (
             if (not($enames)) then () else (
                 if ($global) then $schemas/xs:element
-                else $schemas/descendant::xs:element
-                )[tt:matchesNameFilter(@name, $enames)],
+                else $schemas/descendant::xs:element)
+                [tt:matchesNameFilter(@name, $enames)],
             if (not($tnames)) then () else 
                 $schemas/(descendant::xs:simpleType, descendant::xs:complexType)
                 [tt:matchesNameFilter(@name, $tnames)],
@@ -161,7 +165,20 @@ declare function f:lcomps($enames as element(nameFilter)*,
         let $normalizedName := tt:normalizeQName(QName($namespace, $name), $nsmap)
         let $deps := app:deps($comp, $schemas)
         
-        let $compNameIfTypeComp := 
+        let $elemNames := $deps?elems        
+        let $depsElemDecls :=
+            if (empty($elemNames)) then ()
+            else
+                for $elemName in $elemNames
+                let $lname := local-name-from-QName($elemName)
+                let $uri := namespace-uri-from-QName($elemName)
+                return
+                    $schemas[not(@targetNamespace) and not($uri) or @targetNamespace eq $uri]
+                    /xs:element[@name eq $lname]
+        let $depsElemDeclsAnom := $depsElemDecls[(xs:simpleType, xs:complexType)]
+
+        
+        let $compNameIfTypeComp :=
             $comp[self::xs:simpleType, self::xs:complexType]/$normalizedName
         let $compNameIfGroupComp := $comp[self::xs:group]/$normalizedName
             
@@ -190,19 +207,25 @@ declare function f:lcomps($enames as element(nameFilter)*,
         (: 0. anonymous type 
                  if comp is element with a local type, the local type
                  must be considered) :)
-        let $anomTypeComp := 
+        let $anomTypeComps := ( 
             $comp/self::xs:element/(xs:simpleType, xs:complexType)
-            /f:lcomp_anomType(., $options, $nsmap, $schemas)
+            /f:lcomp_anomType(., $options, $nsmap, $schemas),
+            $depsElemDeclsAnom/f:lcomp_anomType(., $options, $nsmap, $schemas)
+        )            
             
         (: 1. explicit types :)
         let $typeNames := distinct-values(($deps?types, $compNameIfTypeComp))
+        
         let $typeComps := (
-            $anomTypeComp,
+            $anomTypeComps,
             for $typeName in $typeNames
+            let $DUMMY := trace($typeName, 'TYPE_NAME: ')
             order by local-name-from-QName($typeName), prefix-from-QName($typeName)
+            where not(namespace-uri-from-QName($typeName) eq $app:URI_XSD)
             return
                 f:lcomp_type($typeName, $options, map{}, $nsmap, $schemas)
         )
+        
         (: 2. expand base types :)        
         let $expandedTypes := 
             if (not($expandBaseType)) then $typeComps else
@@ -225,16 +248,67 @@ declare function f:lcomps($enames as element(nameFilter)*,
         (: 3. expand base types of contained local types :)   
         let $fullyExpandedGroups := 
             app:expandGroupContainedLocalTypes($expandedGroups, $expandedTypes)
-        return
+
+        (: elem components 
+           ===============:)
+        let $elemComponents :=            
+            for $elemName in $elemNames
+            let $elemNameN := tt:normalizeQName($elemName, $nsmap)
+            let $elem := app:findElem($elemName, $schemas)
+            let $elemComp := f:lcomp_elem($elem, $options, $nsmap, $schemas)            
+            return
+                <z:elem name="{$elemNameN}">{$elemComp}</z:elem>
         
+        (: substitution groups 
+           =================== :)
+        let $sgroups := 
+            let $allSgroups := f:sgroupMembers($schemas, (), (), (), ())
+            let $selSgroups :=
+                if (map:size($allSgroups) eq 0 or true()) then ()
+                else
+                    let $globalElems := trace(
+                        map:merge(
+                            for $elem in ($expandedTypes, $fullyExpandedGroups)//*[@z:isGlobal eq 'true']
+                            let $nname := node-name($elem)
+                            return
+                                map:entry($nname, $elem[1])
+                        ) , 'GLOBAL_ELEMS: ')                                
+                    let $globalElemNames := map:keys($globalElems)
+                    return                       
+                        for $ename in map:keys($allSgroups)[. = $globalElemNames]                                      
+                        let $members := $allSgroups($ename)
+                        let $nename := tt:normalizeQName($ename, $nsmap)
+                        return
+                            <z:sgroup head="{$ename}" countMembers="{count($members)}">{
+                                for $member in $members
+                                let $memberElem := $globalElems($member)
+                                return
+                                    if (not($memberElem)) then error(QName((), 'PROGRAM_ERROR'),
+                                        concat('Substitution group member not found: ', $member))
+                                    else $memberElem
+(:                                    
+                                let $nname := tt:normalizeQName($member, $nsmap)
+                                order by local-name-from-QName($member),
+                                         namespace-uri-from-QName($member)
+                                return
+                                    <z:sgroupMember name="{$nname}"/>
+:)                                    
+                            }</z:sgroup>
+            return
+                <z:sgroups count="{count($selSgroups)}">{$selSgroups}</z:sgroups>
+            
+        return
+            (: $compKindLabel = element | simpleType | complexType | group :)
             element {$compKindLabel} {
                 attribute z:name {$normalizedName},     
                 attribute z:loc {$loc},
                 $elemType,
                 $elemTypeLoc,
                 <z:types count="{count($typeNames)}">{$expandedTypes}</z:types>,
-                <z:groups count="{count($groupNames)}">{$fullyExpandedGroups}</z:groups>
-            }  
+                <z:groups count="{count($groupNames)}">{$fullyExpandedGroups}</z:groups>,                
+                <z:elems count="{count($elemComponents)}">{$elemComponents}</z:elems>
+
+            }
     return
         app:addNSBs(
             <z:lcomps countXsds="{count($schemas)}" 
@@ -483,6 +557,7 @@ declare function f:lcomp_type_elemsRC($n as node(),
     case element(xs:anyAttribute) return ()    
     case element(xs:attributeGroup) return ()    
     case element(xs:simpleContent) return ()    
+    case element(xs:assert) return ()
     case comment() return ()    
     case processing-instruction() return ()
     
@@ -524,6 +599,8 @@ declare function f:lcomp_type_elemsRC($n as node(),
     
     (: an element declaration :)
     case element(xs:element) return
+        f:lcomp_elem($n, $options, $nsmap, $schemas)
+(:    
         let $name := app:getNormalizedComponentName($n, $nsmap)
         let $loc := app:getComponentLocator($n, $nsmap, $schemas)
         let $elemD := 
@@ -553,6 +630,7 @@ declare function f:lcomp_type_elemsRC($n as node(),
                 if (($n, $elemD)/@abstract eq 'true') then 
                     attribute z:abstract {'true'}
                 else ()
+            let $isGlobalAtt := if ($n is $elemD) then () else attribute z:isGlobal {'true'}                
             let $locAtt := attribute z:loc {$loc}
             let $xsAtts := 
                 for $a in ($n|$elemD)/@* 
@@ -560,7 +638,8 @@ declare function f:lcomp_type_elemsRC($n as node(),
             return (
                 $nameAtt,
                 $occAtt,
-                $abstractAtt, 
+                $abstractAtt,
+                $isGlobalAtt,                
                 $typePropertyAtts,
                 $locAtt,            
                 $xsAtts
@@ -587,6 +666,7 @@ declare function f:lcomp_type_elemsRC($n as node(),
                 $content_atts,
                 $content_elems
             }
+:)
 
     case attribute(name) return
         let $name := app:getNormalizedComponentName($n/.., $nsmap)
@@ -598,6 +678,107 @@ declare function f:lcomp_type_elemsRC($n as node(),
 
     default return $n        
 };        
+
+(:~
+ : Returns element locations and compositors representing the contents
+ : of an element declaration.
+ : 
+ : An element location is an element named after the elements which the 
+ : location represents. Compositors are z:_sequence_, z:_choice_ and 
+ : z:_all_ elements.
+ :
+ : @param elem an element declaration
+ : @param options an element representing processing options; 
+ :     not evaluated by this function
+ : @param nsmap normalized bindings of namespace URIs to prefixes
+ : @param schemas the schema elements currently considered
+ : @return element locations and compositors representing the content of
+ :     the complex type
+ :) 
+declare function f:lcomp_elem($elem as element(xs:element),
+                              $options as element(options),
+                              $nsmap as element(),
+                              $schemas as element(xs:schema)+)
+        as node()* {
+    let $occAtt := app:getOccAtt($elem) return
+    
+    (: case 1) element declaration references a global element declaration :)
+    if ($elem/@ref) then
+        let $refName := resolve-QName($elem/@ref, $elem)
+        let $refNameN := tt:normalizeQName($refName, $nsmap)
+        return
+            element {$refNameN} {
+                attribute z:name {$refNameN},
+                attribute z:ref {$refNameN},
+                $occAtt
+            }
+    else
+    
+    let $name := app:getNormalizedComponentName($elem, $nsmap)
+    let $loc := app:getComponentLocator($elem, $nsmap, $schemas)
+    let $elemD := 
+        if ($elem/@ref) then app:rfindElem($elem/@ref, $schemas)
+        else $elem
+    let $anomType := $elemD/(xs:simpleType, xs:complexType)
+    let $typeName := 
+        if ($anomType) then () else $elemD/@type/resolve-QName(., ..)        
+    let $anno := ($elem/xs:annotation, ($elemD except $elem)/xs:annotation)
+        
+    (: type anonymous or builtin: preserve all type property atts; 
+       otherwise, keep only @z:type :)
+    let $typePropertyItems :=           
+        if ($anomType) then 
+            $anomType/f:lcomp_typePropertyItems(., (), $nsmap, $schemas)
+        else if (namespace-uri-from-QName($typeName) eq $c:URI_XSD) then 
+            f:lcomp_typePropertyItems($typeName, (), $nsmap, $schemas)
+        else f:getTypeAtt($elemD, $nsmap)
+    let $typePropertyAtts := $typePropertyItems[self::attribute()]
+    let $typePropertyElems := $typePropertyItems[self::element()]
+        
+    (: info atts :)
+    let $infoAtts := 
+        let $nameAtt := attribute z:name {$name} 
+        let $abstractAtt :=
+            if (($elem, $elemD)/@abstract eq 'true') then 
+                attribute z:abstract {'true'}
+            else ()
+        let $isGlobalAtt := if ($elem is $elemD) then () else attribute z:isGlobal {'true'}                
+        let $locAtt := attribute z:loc {$loc}
+        let $xsAtts := 
+            for $a in ($elem|$elemD)/@* 
+            return f:lcomp_type_elemsRC($a, $options, $nsmap, $schemas)
+        return (
+            $nameAtt,
+            $occAtt,
+            $abstractAtt,
+            $isGlobalAtt,                
+            $typePropertyAtts,
+            $locAtt,            
+            $xsAtts
+        )
+       
+    (: contents of anonymous type :)
+    let $typeContent := 
+        $anomType/f:lcomp_typeContent(., $options, $nsmap, $schemas)/node()
+    
+    (: annotation :)
+    let $annoElem := 
+        $anno/f:lcomp_type_anno(., $options, $nsmap, $schemas)
+    
+    (: compose content :)
+    let $content_atts := 
+        let $raw := ($infoAtts, ($typeContent, $annoElem)[self::attribute()])
+        return 
+            for $a in $raw group by $name := node-name($a) return $a[1]
+    let $content_elems := ($annoElem, $typeContent)[self::element()]
+    
+    (: construct element descriptor :)
+    return         
+        element {$name} {
+            $content_atts,
+            $content_elems
+        }
+};
 
 (:~
  : Returns a location tree component representing schema annotations.
@@ -691,7 +872,7 @@ declare function f:lcomp_typePropertyItems(
     let $type :=        
         if ($typeOrTypeName instance of xs:anyAtomicType) then ()
         else $typeOrTypeName        
-    let $typeName := 
+    let $typeName :=
         if (not($type)) then $typeOrTypeName
         else app:getComponentName($type)
     let $nname := app:normalizeQName($typeName, $nsmap)
@@ -701,7 +882,7 @@ declare function f:lcomp_typePropertyItems(
         
     let $builtinBaseTypeName := 
         $type/f:tfindTypeBuiltinBaseTypeName(., $schemas) ! app:normalizeQName(., $nsmap)
-    let $baseTypeName := 
+    let $baseTypeName :=
         $type/app:tfindTypeBaseTypeName(., $schemas) ! app:normalizeQName(., $nsmap)
         [not(. eq $app:ANY_TYPE)]
     let $contentTypeAndVariant :=

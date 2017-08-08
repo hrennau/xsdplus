@@ -20,6 +20,18 @@ declare namespace z="http://www.ttools.org/structure";
  : ============================================================================
  :)
  
+ (:~
+  : Returns a string consisting of $number repetitions of character $char.
+  :
+  : @param char the character to be repeated
+  : @param number the number of repetitions
+  : @return string consisting of repeated characters
+  :)
+ declare function m:repeatChar($char as xs:string, $number as xs:integer)
+        as xs:string {
+    string-join(for $i in 1 to $number return $char, '')        
+};
+
 (:~
  : Splits a string into items separated by the separator $sep, which is expected 
  : to be a single character. Occurrences $sep which are preceded by a backslash 

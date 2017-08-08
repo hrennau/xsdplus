@@ -103,7 +103,7 @@ declare function f:depsMap2Elem($deps as map(*))
             for $type in $deps?types
             let $lname := local-name-from-QName($type)
             let $uri := namespace-uri-from-QName($type)
-            order by lower-case($lname)
+            order by lower-case($lname), lower-case($uri)
             return
                 <type name="{$lname}" namespace="{$uri}"/>
         return
@@ -113,6 +113,7 @@ declare function f:depsMap2Elem($deps as map(*))
             for $group in $deps?groups 
             let $lname := local-name-from-QName($group)
             let $uri := namespace-uri-from-QName($group)
+            order by lower-case($lname), lower-case($uri)            
             return <group name="{$lname}" namespace="{$uri}"/>
         return
             <groups count="{count($groups)}">{$groups}</groups>,
@@ -121,6 +122,7 @@ declare function f:depsMap2Elem($deps as map(*))
             for $agroup in $deps?agroups 
             let $lname := local-name-from-QName($agroup)
             let $uri := namespace-uri-from-QName($agroup)
+            order by lower-case($lname), lower-case($uri)            
             return <agroup name="{$lname}" namespace="{$uri}"/> 
         return
             <agroups count="{count($agroups)}">{$agroups}</agroups>,
@@ -129,6 +131,7 @@ declare function f:depsMap2Elem($deps as map(*))
             for $elem in $deps?elems 
             let $lname := local-name-from-QName($elem)
             let $uri := namespace-uri-from-QName($elem)
+            order by lower-case($lname), lower-case($uri)            
             return <elem name="{$lname}" namespace="{$uri}"/> 
         return
             <elems count="{count($elems)}">{$elems}</elems>,
@@ -137,6 +140,7 @@ declare function f:depsMap2Elem($deps as map(*))
             for $att in $deps?atts 
             let $lname := local-name-from-QName($att)
             let $uri := namespace-uri-from-QName($att)
+            order by lower-case($lname), lower-case($uri)            
             return <att name="{$lname}" namespace="{$uri}"/> 
         return
             <atts count="{count($atts)}">{$atts}</atts>

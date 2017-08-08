@@ -8,11 +8,22 @@
 
 (:~@operations
    <operations>
-      <operation name="locators" type="item()" func="locatorsOp">     
+      <operation name="locators" type="item()*" func="locatorsOp">     
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
          <param name="enames" type="nameFilter?"/>
-         <param name="addFname" type="xs:boolean?" default="false"/>         
+         <param name="gnames" type="nameFilter?"/>         
+         <param name="hnames" type="nameFilter?"/>         
+         <param name="addFname" type="xs:boolean?" default="false"/>    
+         <param name="format" type="xs:string?" default="text" fct_values="text, xml"/>
+         <pgroup name="in" minOccurs="1"/>
+      </operation>
+      <operation name="rlocators" type="item()" func="rlocatorsOp">     
+         <param name="xsd" type="docFOX*" sep="SC" pgroup="in"/>
+         <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
+         <param name="locators" type="linesFOX*"/>
+         <param name="skipAnno" type="xs:boolean?" default="true"/>
+         <param name="mode" type="xs:string?" fct_values="resolve, check" default="resolve"/>
          <pgroup name="in" minOccurs="1"/>
       </operation>
     </operations>  
@@ -45,16 +56,41 @@ declare variable $f:USE_OLD_COMPONENT_LOCATORS as xs:boolean := false();
  : Implements operation 'locators'.
  :)
 declare function f:locatorsOp($request as element())
-        as element() {
+        as item()* {
     let $schemas as element(xs:schema)* := app:getSchemas($request)        
     let $fname := tt:getParam($request, 'addFname')
+    let $format := tt:getParam($request, 'format')
     let $enames := tt:getParam($request, 'enames')
-    
-    let $comps := 
-        if (not(($enames, ()))) then $schemas/descendant-or-self::* else (
-            if (not($enames)) then () else f:getElems($request, $schemas),
-            ()
-        )        
+    let $gnames := tt:getParam($request, 'gnames')    
+    let $hnames := tt:getParam($request, 'hnames')    
+
+    let $comps :=
+        if (not(($enames, $gnames, $hnames))) then $schemas/descendant-or-self::*
+        else (
+            let $scomps := 
+                if (not($enames)) then ()
+                else $schemas//xs:element
+                    [@name and tt:matchesNameFilter(@name, $enames) or
+                     @ref and tt:matchesNameFilter(replace(@ref, '.+:', ''), $enames)]
+            let $scomps := (
+                $scomps,
+                if (not($gnames)) then ()
+                else (
+                    $schemas/xs:group[tt:matchesNameFilter(@name, $gnames)],
+                    $schemas/*//xs:group[tt:matchesNameFilter(replace(@ref, '.*:', ''), $gnames)]
+                )
+            )
+            let $scomps := (
+                $scomps,
+                if (not($hnames)) then ()
+                else (
+                    $schemas/xs:attributeGroup[tt:matchesNameFilter(@name, $hnames)],
+                    $schemas/*//xs:attributeGroup[tt:matchesNameFilter(replace(@ref, '.*:', ''), $hnames)]
+                )
+            )
+            return
+                $scomps
+    )            
     let $nsmap := app:getTnsPrefixMap($schemas)        
     let $locs := 
         for $comp in $comps
@@ -65,12 +101,48 @@ declare function f:locatorsOp($request as element())
                 if (not($fname)) then () else attribute fname {$comp/root()/replace(document-uri(.), '.*/', '')},
                 if ($check) then () else attribute ERROR {'CANNOT-RESOLVE'}
             }</z:loc>
-    return 
+    let $reportXml := 
         <z:locs count="{count($locs)}">{           
             for $loc in $locs
             order by $loc/@value 
             return $loc          
         }</z:locs>
+    return
+        if ($format eq 'xml') then $reportXml
+        else $reportXml//z:loc/@value/string()
+};
+
+ (:~
+ : Implements operation 'rlocators'.
+ :)
+declare function f:rlocatorsOp($request as element())
+        as element() {
+    let $schemas as element(xs:schema)* := app:getSchemas($request)
+    let $nsmap := app:getTnsPrefixMap($schemas)
+    let $locators := tt:getParam($request, 'locators')
+    let $skipAnno := tt:getParam($request, 'skipAnno')
+    let $mode := tt:getParam($request, 'mode')
+    
+    let $comps :=
+        for $locator in $locators
+        let $comp := app:resolveComponentLocator($locator, $nsmap, $schemas)
+        return 
+            if ($mode eq 'check') then
+                let $rloc := $comp/app:getComponentLocator(., $nsmap, $schemas)
+                let $check := ($rloc eq $locator, false())[1]
+                return
+                    <z:comp check="{$check}" loc="{$locator}">{
+                        if ($check) then () else
+                            attribute rloc {$rloc}
+                    }</z:comp>
+            else
+                let $ecomp := 
+                    if (not($skipAnno) or $comp/self::xs:annotation) then $comp 
+                    else app:editComponent($comp, $request)
+                return
+                    <z:comp loc="{$locator}">{$ecomp}</z:comp>
+    return
+        <z:comps xmlns:xs="http://www.w3.org/2001/XMLSchema">{$comps}</z:comps>
 };
 
 (:
@@ -190,7 +262,11 @@ declare function f:getComponentLocator($comp as node(),
     
     (: lastDeclaration - after 'lastDeclaration', every navigation step is 
        recorded, not only the declaration and compositor steps :) 
-    let $lastDeclaration := $comp/ancestor-or-self::*[self::xs:attribute, self::xs:element][1]
+    let $lastDeclaration := $comp/ancestor-or-self::*[
+        self::xs:attribute, 
+        self::xs:element, 
+        self::xs:group[@ref],
+        self::xs:attributeGroup[@ref]][1]
     return
     
     (: case: component = schema element :)
@@ -260,6 +336,23 @@ declare function f:getComponentLocator($comp as node(),
                         return if (not($same)) then () else concat('[', 1 + count($same), ']')
                 return concat($normalizedName, $index)
  
+            case element(xs:group) return
+                let $name := $anc/@ref/resolve-QName(., ..)
+                let $normalizedName := tt:normalizeQName($name, $nsmap)
+                let $lname := local-name-from-QName($name)
+                let $similar := $anc/preceding-sibling::xs:group[@ref/replace(., '.+:', '') eq $lname]
+                let $index :=
+                    if (not($similar)) then () else
+                        let $same := $similar[@ref/resolve-QName(., ..) eq $name]
+                        return if (not($same)) then () else concat('[', 1 + count($same), ']')
+                return concat('group(', $normalizedName, ')', $index)
+
+            case element(xs:attributeGroup) return
+                let $name := $anc/@ref/resolve-QName(., ..)
+                let $normalizedName := tt:normalizeQName($name, $nsmap)
+                let $lname := local-name-from-QName($name)
+                return concat('attributeGroup(', $normalizedName, ')')
+
             (: case: trailing elements 
                  (e.g. .../a:foo/xs:complexType - identifies the local type definition) 
              :) 
@@ -336,7 +429,7 @@ declare function f:_resolveComponentLocatorRC($context as node()?,
     let $newContext :=
                 
         (: top level component - e.g. complexType(a:FooType) :)
-        if (contains($step, '(')) then
+        if (contains($step, '(') and (not($context) or $context/self::xs:schema)) then
             let $root := replace($step, '/.*', '')
             let $compKind := substring-before($step, '(')
             let $compName := replace($step, '.*\(|\).*', '')
@@ -388,11 +481,37 @@ declare function f:_resolveComponentLocatorRC($context as node()?,
                     let $name := substring($step, 2)
                     let $qname := tt:resolveNormalizedQName($name, $nsmap)
                     let $lname := local-name-from-QName($qname)
-                    let $try := $container/xs:attribute[@name eq $lname]
+                    let $attPerName := 
+                        let $candidate := $container/xs:attribute[@name eq $lname]
+                        return
+                            if (not($candidate)) then ()
+                            else
+                                let $attributeForm :=
+                                    ($candidate/@attributeForm, $candidate/ancestor::xs:schema/@attributeFormDefault)[1]
+                                let $uri :=
+                                    if (not($attributeForm eq 'qualified')) then () else
+                                        $context/ancestor-or-self::xs:schema/@targetNamespace
+                                return
+                                    $candidate[QName($uri, $lname) eq $qname]
                     return
-                        if ($try) then $try
-                        else
-                            $container/xs:attribute[@ref/resolve-QName(., ..) eq $qname]
+                        if ($attPerName) then $attPerName
+                        else $container/xs:attribute[@ref/resolve-QName(., ..) eq $qname]
+                        
+                (: group(...) :)                        
+                else if (starts-with($step, 'group(')) then
+                    let $groupName := replace($step, '.*\(\s*|\s*\).*', '')
+                    let $groupQName := tt:resolveNormalizedQName($groupName, $nsmap)
+                    let $index := if (not(contains($step, '['))) then 1 else 
+                        xs:integer(replace($step, '.+\[(.+)\].*', '$1'))
+                    return
+                        $container/xs:group[@ref/resolve-QName(., ..) eq $groupQName][$index]
+                        
+                (: attributeGroup(...) :)                        
+                else if (starts-with($step, 'attributeGroup(')) then
+                    let $agroupName := replace($step, '.*\(\s*|\s*\).*', '')
+                    let $agroupQName := tt:resolveNormalizedQName($agroupName, $nsmap)
+                    return
+                        $container/xs:attributeGroup[@ref/resolve-QName(., ..) eq $agroupQName]
                         
                 (: component != compositor, element or attribute declaration :)                        
                 else if (starts-with($step, 'xs:')) then
@@ -411,10 +530,19 @@ declare function f:_resolveComponentLocatorRC($context as node()?,
                         if ($context/ancestor-or-self::xs:annotation) then
                             $context/*[local-name(.) eq $lname][$index]
                         else
-                            let $try := $container/xs:element[@name eq $lname]
-                            return
-                                if ($try) then $try
-                                else $container/xs:element[@ref/resolve-QName(., ..) eq $qname][$index]
+                            let $elemPerName := 
+                                for $candidate in $container/xs:element[@name eq $lname]
+                                return
+                                    let $elementForm :=
+                                        ($candidate/@elementForm, $candidate/ancestor::xs:schema/@elementFormDefault)[1]
+                                    let $uri :=
+                                        if (not($elementForm eq 'qualified')) then () else
+                                            $context/ancestor-or-self::xs:schema/@targetNamespace
+                                    return
+                                        $candidate[QName($uri, $lname) eq $qname]
+                            let $elemPerRef := $container/xs:element[@ref/resolve-QName(., ..) eq $qname]
+                        return
+                            ($elemPerName | $elemPerRef)[$index]
     return
         if (not($newContext)) then ()
         else if (not($rest)) then $newContext

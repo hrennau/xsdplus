@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2017-06-15T10:18:56.046+02:00 
+ : @version 2017-08-08T23:39:12.589+02:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -125,11 +125,22 @@ declare variable $toolScheme :=
       <pgroup name="in" minOccurs="1"/>
       <pgroup name="comps" maxOccurs="1"/>
     </operation>
-    <operation name="locators" type="item()" func="locatorsOp" mod="componentLocator.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
+    <operation name="locators" type="item()*" func="locatorsOp" mod="componentLocator.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in"/>
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
       <param name="enames" type="nameFilter?"/>
+      <param name="gnames" type="nameFilter?"/>
+      <param name="hnames" type="nameFilter?"/>
       <param name="addFname" type="xs:boolean?" default="false"/>
+      <param name="format" type="xs:string?" default="text" fct_values="text, xml"/>
+      <pgroup name="in" minOccurs="1"/>
+    </operation>
+    <operation name="rlocators" type="item()" func="rlocatorsOp" mod="componentLocator.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
+      <param name="xsd" type="docFOX*" sep="SC" pgroup="in"/>
+      <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
+      <param name="locators" type="linesFOX*"/>
+      <param name="skipAnno" type="xs:boolean?" default="true"/>
+      <param name="mode" type="xs:string?" fct_values="resolve, check" default="resolve"/>
       <pgroup name="in" minOccurs="1"/>
     </operation>
     <operation name="elem" type="item()" func="reportElems" mod="componentReporter.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
@@ -533,8 +544,19 @@ declare function m:execOperation_deps($request as element())
  : @return the operation result
  :)
 declare function m:execOperation_locators($request as element())
-        as item() {
+        as item()* {
     a1:locatorsOp($request)        
+};
+     
+(:~
+ : Executes operation 'rlocators'.
+ :
+ : @param request the request element
+ : @return the operation result
+ :)
+declare function m:execOperation_rlocators($request as element())
+        as item() {
+    a1:rlocatorsOp($request)        
 };
      
 (:~
@@ -786,6 +808,7 @@ declare function m:execOperation($req as element())
         else if ($opName eq 'btree') then m:execOperation_btree($req)
         else if ($opName eq 'deps') then m:execOperation_deps($req)
         else if ($opName eq 'locators') then m:execOperation_locators($req)
+        else if ($opName eq 'rlocators') then m:execOperation_rlocators($req)
         else if ($opName eq 'elem') then m:execOperation_elem($req)
         else if ($opName eq 'att') then m:execOperation_att($req)
         else if ($opName eq 'type') then m:execOperation_type($req)

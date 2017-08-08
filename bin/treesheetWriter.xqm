@@ -85,7 +85,12 @@ declare function f:treesheetOp($request as element())
         switch($r)
         case('tdesc') return
             function($n, $options) 
-                {$n/(@z:typeDesc, @z:contentTypeDesc)[1] ! ('tdesc: ' || .)}
+                {
+                    if (not($n/@z:type)) then
+                        if ($n/@z:abstract) then 'tdesc: (abstract)'
+                        else 'tdesc: (no type)'
+                    else $n/(@z:typeDesc, @z:contentTypeDesc)[1] ! ('tdesc: ' || .)
+                }
         case('anno') return f:reportAnno(?, ?, $lang)
         case('tname') return
             function($n, $options) 
