@@ -336,6 +336,7 @@ declare function f:getComponentLocator($comp as node(),
                         return if (not($same)) then () else concat('[', 1 + count($same), ']')
                 return concat($normalizedName, $index)
  
+            (: case: group reference :) 
             case element(xs:group) return
                 let $name := $anc/@ref/resolve-QName(., ..)
                 let $normalizedName := tt:normalizeQName($name, $nsmap)
@@ -347,10 +348,10 @@ declare function f:getComponentLocator($comp as node(),
                         return if (not($same)) then () else concat('[', 1 + count($same), ']')
                 return concat('group(', $normalizedName, ')', $index)
 
+            (: case: attribute group reference :)
             case element(xs:attributeGroup) return
                 let $name := $anc/@ref/resolve-QName(., ..)
                 let $normalizedName := tt:normalizeQName($name, $nsmap)
-                let $lname := local-name-from-QName($name)
                 return concat('attributeGroup(', $normalizedName, ')')
 
             (: case: trailing elements 
@@ -358,14 +359,17 @@ declare function f:getComponentLocator($comp as node(),
              :) 
             default return
                 if ($anc >> $lastDeclaration or not($lastDeclaration)) then
-                    let $isXs := exists($anc/self::xs:*)                
+                    let $nname := node-name($anc)
+                    let $uri := namespace-uri-from-QName($nname)
+                    let $useName :=
+                        if ($nsmap/*/@uri = $uri) then tt:normalizeQName($nname, $nsmap)
+                        else local-name($anc)
                     let $indexPostfix :=
-                        let $nname := node-name($anc)
                         let $index := 1 + count($anc/preceding-sibling::*[node-name(.) eq $nname])
                         return
                             if ($index eq 1) then () else concat('[', $index, ']')
                     return                            
-                        concat('xs:'[$isXs], local-name($anc), $indexPostfix)
+                        concat($useName, $indexPostfix)
                 else ()
     , '/')        
 };
