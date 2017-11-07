@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2017-08-08T23:39:12.589+02:00 
+ : @version 2017-11-07T22:24:34.062+01:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -120,6 +120,7 @@ declare variable $toolScheme :=
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
       <param name="global" type="xs:boolean?" default="true"/>
+      <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
       <pgroup name="in" minOccurs="1"/>
@@ -240,6 +241,7 @@ declare variable $toolScheme :=
       <param name="expandBaseType" type="xs:boolean?" default="true"/>
       <param name="expandGroups" type="xs:boolean?" default="true"/>
       <param name="stypeTrees" type="xs:boolean?" default="true"/>
+      <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>
       <param name="annos" type="xs:boolean?" default="true"/>
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
@@ -255,6 +257,7 @@ declare variable $toolScheme :=
       <param name="stypeTrees" type="xs:boolean?" default="true"/>
       <param name="annos" type="xs:boolean?" default="true"/>
       <param name="propertyFilter" type="nameFilter?"/>
+      <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
       <pgroup name="in" minOccurs="1"/>
@@ -308,6 +311,7 @@ declare variable $toolScheme :=
       <param name="global" type="xs:boolean?" default="true"/>
       <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
       <param name="sortAtts" type="xs:boolean?" default="false"/>
+      <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
       <param name="colRhs" type="xs:integer" default="60"/>

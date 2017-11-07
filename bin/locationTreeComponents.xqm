@@ -15,7 +15,8 @@
          <param name="global" type="xs:boolean?" default="true"/>        
          <param name="expandBaseType" type="xs:boolean?" default="true"/>
          <param name="expandGroups" type="xs:boolean?" default="true"/>         
-         <param name="stypeTrees" type="xs:boolean?" default="true"/>         
+         <param name="stypeTrees" type="xs:boolean?" default="true"/>     
+         <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>         
          <param name="annos" type="xs:boolean?" default="true"/>         
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
@@ -78,14 +79,16 @@ declare function f:lcompsOp($request as element())
     let $gnames := tt:getParams($request, 'gnames')  
     let $global := tt:getParams($request, 'global')
     let $withStypeTrees := tt:getParams($request, 'stypeTrees')
-    let $withAnnos := tt:getParams($request, 'annos')    
+    let $withAnnos := tt:getParams($request, 'annos')
     let $expandBaseType := tt:getParams($request, 'expandBaseType')
     let $expandGroups := tt:getParams($request, 'expandGroups')
+    let $sgroupStyle := tt:getParam($request, 'sgroupStyle')    
     let $nsmap := app:getTnsPrefixMap($schemas)
     
     let $options :=
         <options withStypeTrees="{$withStypeTrees}"
-                 withAnnos="{$withAnnos}"/>
+                 withAnnos="{$withAnnos}"
+                 sgroupStyle="{$sgroupStyle}" />
     return
         f:lcomps($enames, $tnames, $gnames, $global, $options, 
             $expandBaseType, $expandGroups, $nsmap, $schemas)
@@ -157,13 +160,14 @@ declare function f:lcomps($enames as element(nameFilter)*,
         case 'group' return 'group'
         default return ()
         
+    let $sgroupStyle := $options/@sgroupStyle/string()        
     let $report :=
         for $comp in $comps
         let $name := trace($comp/@name , 'COMPONENT NAME: ')
         let $loc := app:getComponentLocator($comp, $nsmap, $schemas)
         let $namespace := $comp/ancestor::xs:schema/@targetNamespace  
         let $normalizedName := tt:normalizeQName(QName($namespace, $name), $nsmap)
-        let $deps := app:deps($comp, $schemas)
+        let $deps := app:deps($comp, $sgroupStyle, $schemas)
         
         let $elemNames := $deps?elems        
         let $depsElemDecls :=
@@ -219,7 +223,6 @@ declare function f:lcomps($enames as element(nameFilter)*,
         let $typeComps := (
             $anomTypeComps,
             for $typeName in $typeNames
-            let $DUMMY := trace($typeName, 'TYPE_NAME: ')
             order by local-name-from-QName($typeName), prefix-from-QName($typeName)
             where not(namespace-uri-from-QName($typeName) eq $app:URI_XSD)
             return
@@ -257,7 +260,7 @@ declare function f:lcomps($enames as element(nameFilter)*,
             let $elem := app:findElem($elemName, $schemas)
             let $elemComp := f:lcomp_elem($elem, $options, $nsmap, $schemas)            
             return
-                <z:elem name="{$elemNameN}">{$elemComp}</z:elem>
+                <z:elem z:name="{$elemNameN}">{$elemComp}</z:elem>
         
         (: substitution groups 
            =================== :)

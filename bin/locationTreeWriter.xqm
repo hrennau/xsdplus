@@ -17,6 +17,7 @@
          <param name="stypeTrees" type="xs:boolean?" default="true"/>         
          <param name="annos" type="xs:boolean?" default="true"/>   
          <param name="propertyFilter" type="nameFilter?"/>
+         <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
          <pgroup name="in" minOccurs="1"/>    
@@ -39,7 +40,8 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "constants.xqm",
     "locationTreeComponents.xqm",
     "locationTreeNormalizer.xqm",
-    "occUtilities.xqm";
+    "occUtilities.xqm",
+    "substitutionGroups.xqm";
     
 declare namespace c="http://www.xsdplus.org/ns/xquery-functions";    
 declare namespace z="http://www.xsdplus.org/ns/structure";
@@ -73,9 +75,11 @@ declare function f:ltreeOp($request as element())
     let $nsmap := app:getTnsPrefixMap($schemas)
     let $groupNorm := trace(tt:getParam($request, 'groupNormalization') , 'GROUP NORMALIZATION: ')
     let $propertyFilter := tt:getParam($request, 'propertyFilter')
+    let $sgroupStyle := tt:getParam($request, 'sgroupStyle')
     
     let $options :=
         <options withStypeTrees="{$withStypeTrees}"
+                 sgroupStyle="{$sgroupStyle}"
                  withAnnos="{$withAnnos}"/>
     
     let $ltree := f:ltree($enames, $tnames, $gnames, $global, $options, 
@@ -104,6 +108,7 @@ declare function f:ltreeOp($request as element())
  : @param tnames a name filter selecting type definitions
  : @param gnames a name filter selecting group definitions
  : @param global if true, only top-level element declarations are considered
+ : @param options they control the processing behaviour;
  : @param groupNormalization controls the extent of group normalization
  : @param nsmap normalized bindings of namespace URIs to prefixes 
  : @param schemas the schema elements currently considered
@@ -120,6 +125,8 @@ declare function f:ltree($enames as element(nameFilter)*,
         as element(z:locationTrees) {                         
     
     let $groupNormalization := ($groupNormalization, 4)[1]
+    
+    (: select schema components to be translated into location trees :)
     let $comps :=
         f:lcomps($enames, $tnames, $gnames, $global, $options, 
             true(), true(), $nsmap, $schemas)
@@ -128,7 +135,8 @@ declare function f:ltree($enames as element(nameFilter)*,
         for $comp in $comps/*
         let $ltree := 
             let $DUMMY := trace('', 'COMPONENTS WRITTEN ...')
-            let $raw := f:lcomps2Ltree($comp, $nsmap)
+            let $sgroups := f:sgroupMembers($schemas, (), (), (), ())
+            let $raw := f:lcomps2Ltree($comp, $sgroups, $options, $nsmap)
             let $DUMMY := trace('', 'RAW TREE CONSTRUCTED ...')            
             let $fine := f:finalizeLtree($raw, $groupNormalization)
             let $DUMMY := trace('', 'TREE TIDIED UP ...')            
@@ -149,18 +157,29 @@ declare function f:ltree($enames as element(nameFilter)*,
  : Transforms a collection of location tree components into a location tree.
  :
  : @param comp an element containing the location tree components of a schema 
- :     component
+ :     component (e.g. the elements, types and groups required for an element)
  : @param nsmap normalized bindings of namespace URIs to prefixes
  : @return a location tree
  :)
-declare function f:lcomps2Ltree($comp as element(), $nsmap as element(z:nsMap))
+declare function f:lcomps2Ltree($comp as element(),
+                                $sgroups as map(xs:QName, xs:QName+),
+                                $options as element(options),
+                                $nsmap as element(z:nsMap))
         as element() {
-    let $compKindLabel := local-name($comp)
+    let $compKindLabel := local-name($comp) 
+        (: elem | type | group :)
     let $compName := tt:resolveNormalizedQNamePrefixed($comp/@z:name, $nsmap)
+        (: elem, type or group name :)
+        
     let $lname := local-name-from-QName($compName)
     let $ns := namespace-uri-from-QName($compName)
     let $atts := $comp/@*    
    
+    let $elemDict :=
+        map:merge(
+            for $elem in $comp/z:elems/z:elem
+            return map:entry($elem/@z:name, $elem)
+        )
     let $typeDict := 
         map:merge(
             for $type in $comp/z:types/z:type
@@ -171,7 +190,9 @@ declare function f:lcomps2Ltree($comp as element(), $nsmap as element(z:nsMap))
             for $group in $comp/z:groups/z:group
             return map:entry($group/@z:name, $group)
         )
-    let $ltree := f:lcomps2LtreeRC($comp, $typeDict, $groupDict, $nsmap, ())
+        
+    let $ltree := f:lcomps2LtreeRC(
+        $comp, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, ())
     return
         <z:locationTree compKind="{$compKindLabel}">{
             $atts,
@@ -201,13 +222,18 @@ declare function f:lcomps2Ltree($comp as element(), $nsmap as element(z:nsMap))
  : @return a fragment of the location tree
  :)
 declare function f:lcomps2LtreeRC($n as node(), 
+                                  $elemDict as map(*),
                                   $typeDict as map(*),
                                   $groupDict as map(*),
+                                  $sgroups as map(xs:QName, xs:QName+),
+                                  $options as element(options),
                                   $nsmap as element(z:nsMap),
                                   $visited as element()*)
         as node()* {
     let $DUMMY :=
-        if (count($visited) ne count($visited/.)) then error()
+        if (count($visited) ne count($visited/.)) then ()
+            (: trace((),
+            concat('count(visited)=', count($visited), ' ; count(visited/*)=', count($visited/*))) :)
         else if (count($visited) lt 120) then () else 
             let $callPath := string-join(
                 $visited ! @z:name/concat(., parent::z:group/'(group)', parent::z:type/'(type)')
@@ -218,18 +244,18 @@ declare function f:lcomps2LtreeRC($n as node(),
     
     typeswitch($n)
     
-    (: element represents an element component to be translated into a location tree :)
+    (: element represents an ELEMENT component to be translated into a location tree :)
     case $comp as element(elem) return
         let $compName := tt:resolveNormalizedQNamePrefixed($comp/@z:name, $nsmap)    
         let $type :=
             if ($comp/@z:type) then map:get($typeDict, $comp/@z:type)
             else if ($comp/@z:typeLoc) then $typeDict?*[@z:loc eq $comp/@z:typeLoc]
             else error()
-        (:content :)
+        (: content (metadata attributes and children representing atts and elems) :)
         let $typeContent := (
             $type/z:typeContent/@*,        
-            for $c in $type/z:typeContent/* return
-                f:lcomps2LtreeRC($c, $typeDict, $groupDict, $nsmap, $type)
+            for $c in $type/z:typeContent/* return f:lcomps2LtreeRC(
+                $c, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, $type)
         )        
         return
             element {$compName} {
@@ -237,34 +263,35 @@ declare function f:lcomps2LtreeRC($n as node(),
                 $typeContent
             }
             
-    (: element represents a type component to be translated into a location tree :)            
+    (: element represents a TYPE component to be translated into a location tree :)            
     case $comp as element(type) return
         let $compName := tt:resolveNormalizedQNamePrefixed($comp/@z:name, $nsmap)    
         let $type := map:get($typeDict, $comp/@z:name)
         (:content :)
         let $typeContent := (
             $type/z:typeContent/@*,
-            for $c in $type/z:typeContent/* return
-                f:lcomps2LtreeRC($c, $typeDict, $groupDict, $nsmap, $type)
+            for $c in $type/z:typeContent/* return f:lcomps2LtreeRC(
+                $c, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, $type)
         )        
         return
             <typedElement>{
                 $typeContent
             }</typedElement>
     
-    (: element represents a group component to be translated into a location tree :)    
+    (: element represents a GROUP component to be translated into a location tree :)    
     case $comp as element(group) return
         let $compName := tt:resolveNormalizedQNamePrefixed($comp/@z:name, $nsmap)  
         let $group := map:get($groupDict, $comp/@z:name)
-        let $content := f:lcomps2LtreeRC($group, $typeDict, $groupDict, $nsmap, ())                
+        let $content := f:lcomps2LtreeRC(
+            $group, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, ())                
         return
             <z:group name="{$compName}">{$content}</z:group>
 
     (: element represents a compositor :)
     case element(z:_sequence_) | element(z:_choice_) | element(z:_all_) return
         let $content :=
-            for $i in $n/(@*, node()) return 
-                f:lcomps2LtreeRC($i, $typeDict, $groupDict, $nsmap, $visited)
+            for $i in $n/(@*, node()) return f:lcomps2LtreeRC(
+                $i, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, $visited)
         let $contentAtts := $content/self::attribute()
         return
             element {node-name($n)} {
@@ -272,14 +299,13 @@ declare function f:lcomps2LtreeRC($n as node(),
             }    
 
     (: element represents a group reference :)
-    (: note - group references within type contents have not yet been
-       resolved :)
+    (: note - group references within type contents have not yet been resolved :)
     case element(z:_group_) return    
         let $groupDef := map:get($groupDict, $n/@ref)  (: TO.DO - normalize name ? :)
         return if (empty($groupDef)) then error() else
             
-        let $groupContent := 
-            f:lcomps2LtreeRC($groupDef, $typeDict, $groupDict, $nsmap, $visited)        
+        let $groupContent := f:lcomps2LtreeRC(
+            $groupDef, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, $visited)        
         return
             if (empty($groupContent)) then error() else
             f:updateOccAtt($groupContent, $n/@z:occ)
@@ -295,26 +321,42 @@ declare function f:lcomps2LtreeRC($n as node(),
                 $n/z:_groupContent_/@*,
                 attribute z:groupRecursion {$n/@z:name}
             }</z:_groupContent_>
-        else  
-            f:lcomps2LtreeRC($n/z:_groupContent_, 
-                $typeDict, $groupDict, $nsmap, ($visited, $n))
+            else  
+                f:lcomps2LtreeRC($n/z:_groupContent_, 
+                    $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, ($visited, $n))
         
     (: group contents are recursively expanded :)
     case element(z:_groupContent_) return
         if ($n/@z:groupRecursion) then $n else
         
         let $content := (
-            for $a in $n/@* return 
-                f:lcomps2LtreeRC($a, $typeDict, $groupDict, $nsmap, $visited),
-            for $i in $n/node() return 
-                f:lcomps2LtreeRC($i, $typeDict, $groupDict, $nsmap, $visited)
+            for $a in $n/@* return f:lcomps2LtreeRC(
+                $a, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, $visited),
+            for $i in $n/node() return f:lcomps2LtreeRC(
+                $i, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, $visited)
         )                
         return
             element {node-name($n)} {
                 $content
             }
 
-    (: element represents a type definition :)
+    (: element represents a referenced element declaration :)
+    case element(z:elem) return
+        if ($visited intersect $n) then
+            let $_ := f:_debug_reportRecursion(
+                concat('ELEM-RECURSION=', $n/@z:name, ': '), $visited) 
+            return
+                let $compName := tt:resolveNormalizedQNamePrefixed($n/@z:name, $nsmap)
+                return
+                    element {$compName} {
+                        attribute z:elemRecursion {$n/@z:name}
+                    }
+        else      
+            for $c in $n/* return f:lcomps2LtreeRC(
+                $c, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, ($visited, $n))
+
+
+    (: element represents a referenced type definition :)
     case element(z:type) return
         if ($visited intersect $n) then
             let $_ := f:_debug_reportRecursion(
@@ -322,56 +364,119 @@ declare function f:lcomps2LtreeRC($n as node(),
         
             attribute z:typeRecursion {$n/@z:name}
         else            
-            for $c in $n/* return
-                f:lcomps2LtreeRC($c, $typeDict, $groupDict, $nsmap, ($visited, $n))
+            for $c in $n/* return f:lcomps2LtreeRC(
+                $c, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, ($visited, $n))
       
     (: 'z:typeContent' is replaced by its attributes and recursively
        expanded contents :)  
     case element(z:typeContent) return (
         $n/@*,
-        for $c in $n/node() return
-            f:lcomps2LtreeRC($c, $typeDict, $groupDict, $nsmap, $visited)
+        for $c in $n/node() return f:lcomps2LtreeRC(
+            $c, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, $visited)
     )
     
     (: element represents an element location :)
-    case element() return        
-        let $content :=
-            if ($n/@z:type ne 'z:_LOCAL_') then
-                let $supplementaryContent := $n/*   (: z:_annotation_, z:_stypeTree_ :)            
-                let $type := map:get($typeDict, $n/@z:type)
-                return
-                    if (not($type)) then ($n/@*, $supplementaryContent)
-                    else if (not($type/z:typeContent)) then ($n/@*, $supplementaryContent)
-                    else
-                        let $content := 
-                            f:lcomps2LtreeRC($type, 
-                                $typeDict, $groupDict, $nsmap, ($visited, $n))
-                        let $contentAtts := $content[self::attribute()]
-                        let $contentElems := $content except $contentAtts
-                        let $contentAttNames := $contentAtts/name()     
-                        let $ownAtts := $n/@*[not(name() = $contentAttNames)]
-                        let $allAtts := ($ownAtts, $contentAtts)
+    case element() return
+        (: case 1: element use with @z:ref :)
+        if ($n/@z:ref) then
+            let $ref := $n/@z:ref/string()
+            let $qname := $n/@z:ref/tt:resolveNormalizedQNamePrefixed(., $nsmap) 
+            let $elemD := $elemDict($ref)
+            let $sgroupMemberNames :=
+                if ($options/@sgroupStyle eq 'ignore') then ()
+                else map:keys($sgroups)[. eq $qname] ! $sgroups(.)
+            let $targets := (
+                $elemD,
+                for $qn in $sgroupMemberNames
+                let $nqname := string(tt:normalizeQName($qn, $nsmap))
+                return $elemDict($nqname)
+            )
+            return if (empty($targets)) then error(QName((), 'SYSTEM_ERROR'),
+                concat('No targets for elem: ', $ref)) else
+            let $sgmTargets := $targets except $elemD 
+            let $targetTrees := (
+                f:lcomps2LtreeRC(
+                    $elemD, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, $visited)
+                ,                
+                if ($options/@sgroupStyle eq 'expand') then                
+                    for $t in $sgmTargets return f:lcomps2LtreeRC(
+                        $t, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, $visited)
+                else if ($options/@sgroupStyle eq 'compact') then
+                    for $t in $sgmTargets
+                    let $typeVariant := $t/*/@z:type ! $typeDict(.)/*/@z:typeVariant
+                    return
+                        if ($typeVariant/matches(., '^(s|cs)')) then
+                            f:lcomps2LtreeRC(
+                                $t, $elemDict, $typeDict, $groupDict, $sgroups, 
+                                $options, $nsmap, $visited)
+                        else
+                            element {$t/*/node-name(.)} {
+                                $t/*/@*, 
+                                attribute z:collapsed {true()},
+                                $t/*/node()
+                            }
+                else if  ($options/@sgroupStyle eq 'ignore') then ()
+                else error()
+            )                    
+            return
+                if (exists($sgroupMemberNames)) then
+                    <z:_sgroup_>{
+                        attribute z:sgHead {$n/@z:name},                
+                        $n/@z:occ,
+                        $targetTrees
+                    }</z:_sgroup_>
+                else
+                    let $occ := $n/@z:occ
+                    return
+                        if (not($occ)) then $targetTrees else
+                            element {node-name($targetTrees)} {
+                                $targetTrees/@z:name,
+                                $occ,
+                                $targetTrees/(@* except @z:name),
+                                $targetTrees/node()
+                            }
+        (: case 2: element use with @z:name :)                            
+        else
+            let $content :=
+                (: case 2a: element with global type reference :)
+                if ($n/@z:type ne 'z:_LOCAL_') then                    
+                    let $supplementaryContent := $n/*   (: z:_annotation_, z:_stypeTree_ :)            
+                    let $type := $typeDict($n/@z:type)
+                    return
+                        if (not($type)) then ($n/@*, $supplementaryContent)
+                        else if (not($type/z:typeContent)) then ($n/@*, $supplementaryContent)
+                        else
+                            let $content := 
+                                f:lcomps2LtreeRC($type, $elemDict, $typeDict, $groupDict, 
+                                    $sgroups, $options, $nsmap, ($visited, $n))
+                            let $contentAtts := $content[self::attribute()]
+                            let $contentElems := $content except $contentAtts
                         
-                        let $mainAtts := $allAtts[self::attribute(z:name), self::attribute(z:occ)]
-                        let $locAtt := $allAtts[self::attribute(z:loc)]
-                        let $otherZAtts := $allAtts[namespace-uri(.) eq $c:URI_LTREE] except ($mainAtts, $locAtt)
-                        let $nonZAtts := $allAtts[not(namespace-uri(.) eq $c:URI_LTREE)]
-                        return (
-                            $mainAtts, $otherZAtts, $locAtt, $nonZAtts,
-                            $supplementaryContent,                            
-                            $contentElems
-                        )
-            else (
-                $n/@*,
-                for $c in $n/node() return 
-                    f:lcomps2LtreeRC($c, $typeDict, $groupDict, $nsmap, ($visited, $n))
-                    (: 20170525, hjr: "$visited" -> "($visited, $n)" :)
-            )                        
-        return                
+                            let $contentAttNames := $contentAtts/name()     
+                            let $ownAtts := $n/@*[not(name() = $contentAttNames)]
+                            let $allAtts := ($ownAtts, $contentAtts)                        
+                            let $mainAtts := $allAtts[self::attribute(z:name), self::attribute(z:occ)]
+                            let $locAtt := $allAtts[self::attribute(z:loc)]
+                            let $otherZAtts := $allAtts[namespace-uri(.) eq $c:URI_LTREE] 
+                                               except ($mainAtts, $locAtt)
+                            let $nonZAtts := $allAtts[not(namespace-uri(.) eq $c:URI_LTREE)]
+                            return (
+                                $mainAtts, $otherZAtts, $locAtt, $nonZAtts,
+                                $supplementaryContent,                            
+                                $contentElems
+                            )
+                (: case 2b: element with local type :)                            
+                else (
+                    $n/@*,                        
+                    for $c in $n/node() return f:lcomps2LtreeRC(
+                        $c, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, 
+                        ($visited, $n))
+                        (: 20170525, hjr: "$visited" -> "($visited, $n)" :)
+                )                        
+        return
             element {node-name($n)} {
                 $content
             }    
-    
     default return $n
 };
 

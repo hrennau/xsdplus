@@ -114,7 +114,7 @@ declare variable $f:constraintTypes :=
  :) 
 declare function f:jschema($request as element())
         as item() {
-    $f:debugDir ! file:write(concat(., '/log.xml'), '<log>', $f:debugSerMethodText),        
+    (: $f:debugDir ! file:write(concat(., '/log.xml'), '<log>', $f:debugSerMethodText),:)        
     let $btree := tt:getParams($request, 'btree')
     let $ename := tt:getParams($request, 'ename')    
     let $top := tt:getParams($request, 'top')
@@ -199,7 +199,7 @@ declare function f:jschemas($request as element())
         let $jschema := f:getJschema($btreeElem, $skipRoot, $format)
         let $fname := concat($dir, '/', $elemName, '_schema.json')
         return ( 
-            file:write($fname, $jschema),
+            (: file:write($fname, $jschema), :)
             <z:jschema elem="{$elemName}" uri="{$fname}"/>
         )
     return

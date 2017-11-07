@@ -15,6 +15,7 @@
          <param name="global" type="xs:boolean?" default="true"/>         
          <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
          <param name="sortAtts" type="xs:boolean?" default="false"/>
+         <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>         
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
          <param name="colRhs" type="xs:integer" default="60"/>
@@ -78,6 +79,7 @@ declare function f:treesheetOp($request as element())
     let $colRhs := tt:getParam($request, 'colRhs')
     let $report := tt:getParam($request, 'report')
     let $lang := tt:getParam($request, 'lang')
+    let $sgroupStyle := tt:getParam($request, 'sgroupStyle')    
     
     let $itemReporter := 
         for $r in $report return
@@ -86,7 +88,8 @@ declare function f:treesheetOp($request as element())
         case('tdesc') return
             function($n, $options) 
                 {
-                    if (not($n/@z:type)) then
+                    if ($n/(self::z:_anyAttribute_)) then ()
+                    else if (not($n/@z:type)) then
                         if ($n/@z:abstract) then 'tdesc: (abstract)'
                         else 'tdesc: (no type)'
                     else $n/(@z:typeDesc, @z:contentTypeDesc)[1] ! ('tdesc: ' || .)
@@ -108,7 +111,8 @@ declare function f:treesheetOp($request as element())
         default return ()
     
     return
-        f:treesheet($enames, $tnames, $gnames, $global, $colRhs, $itemReporter, $nsmap, $schemas)
+        f:treesheet($enames, $tnames, $gnames, $global, $colRhs, 
+            $sgroupStyle, $itemReporter, $nsmap, $schemas)
 };
 
 declare function f:reportAnno($n as node(), $options as element(options)?, $lang as xs:string?) 
@@ -161,6 +165,7 @@ declare function f:treesheet($enames as element(nameFilter)*,
                              $gnames as element(nameFilter)*,
                              $global as xs:boolean?,
                              $colRhs as xs:integer?,
+                             $sgroupStyle as xs:string,
                              $itemReporter as function(*)*,
                              $nsmap as element(z:nsMap)?,
                              $schemas as element(xs:schema)+)
@@ -169,6 +174,7 @@ declare function f:treesheet($enames as element(nameFilter)*,
         <options withStypeTrees="false"
                  withAnnos="true"
                  colRhs="{$colRhs}"
+                 sgroupStyle="{$sgroupStyle}"
         />
     let $nsmap := if ($nsmap) then $nsmap else app:getTnsPrefixMap($schemas)
     let $ltree := app:ltree($enames, $tnames, $gnames, $global, $options, 
@@ -233,11 +239,12 @@ declare function f:ltree2TreesheetRC($n as node(),
         for $c in $n/* return
             f:ltree2TreesheetRC($c, $level, $prefix, $options, $itemReporter)
     
-    case element(z:_choice_) return
+    case element(z:_choice_) | element(z:_sgroup_) return
         let $occ := $n/@z:occ
+        let $sgHeadSuffix := $n/@z:sgHead/concat('[', replace(., '.*:', ''), ']')
         let $occSuffix :=
             if (matches($occ, '\d')) then concat('{', $occ, '}') else $occ
-        let $useName := '_choice_' || $occSuffix    
+        let $useName := local-name($n) || $sgHeadSuffix || $occSuffix    
         return (
             $prefix || $useName,
             let $nextLevel := $level + 1
@@ -254,10 +261,11 @@ declare function f:ltree2TreesheetRC($n as node(),
         let $name := $n/node-name($n)
         let $lname := local-name-from-QName($name)
         let $attPrefix := '@'[$n/parent::z:_attributes_]
+        let $collapsedFlag := '+'[$n/@z:collapsed eq 'true']
         let $occ := $n/@z:occ
         let $occSuffix :=
             if (matches($occ, '\d')) then concat('{', $occ, '}') else $occ
-        let $lhsText := concat($attPrefix, $lname, $occSuffix)
+        let $lhsText := concat($collapsedFlag, $attPrefix, $lname, $occSuffix)
         let $lhsTextWidth := string-length($lhsText)
         let $rhs := f:treesheetRhs($n, $lhsTextWidth, $options, $itemReporter)        
         let $lhs := f:treesheetLhs($n, $prefix, $lhsText, $options, $rhs)

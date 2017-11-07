@@ -12,7 +12,8 @@
          <param name="enames" type="nameFilter?" pgroup="comps"/> 
          <param name="tnames" type="nameFilter?" pgroup="comps"/>         
          <param name="gnames" type="nameFilter?" pgroup="comps"/>         
-         <param name="global" type="xs:boolean?" default="true"/>         
+         <param name="global" type="xs:boolean?" default="true"/>      
+         <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>         
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
          <pgroup name="in" minOccurs="1"/>         
@@ -69,6 +70,7 @@ declare function f:depsOp($request as element())
     let $tnames := tt:getParams($request, 'tnames')    
     let $gnames := tt:getParams($request, 'gnames')  
     let $global := tt:getParams($request, 'global')
+    let $sgroupStyle := tt:getParam($request, 'sgroupStyle')    
     
     let $comps :=
         if (empty(($enames, $tnames, $gnames))) then
@@ -97,7 +99,7 @@ declare function f:depsOp($request as element())
         for $comp in $comps
         let $name := $comp/@name
         let $namespace := $comp/ancestor::xs:schema/@targetNamespace
-        let $deps := f:deps($comp, $schemas)
+        let $deps := f:deps($comp, $sgroupStyle, $schemas)
         let $depsElem := app:depsMap2Elem($deps)
         return
             element {$compKind} {
@@ -132,10 +134,11 @@ declare function f:depsOp($request as element())
  :     direct or indirect dependencies of the given component
  :)
 declare function f:deps($comp as element(), 
+                        $sgroupStyle as xs:string,
                         $schemas as element(xs:schema)+)
         as map(*) {
     let $sgroups := app:sgroupMembers($schemas)
-    let $directDeps := f:directDeps($comp, $sgroups)
+    let $directDeps := f:directDeps($comp, $sgroups, $sgroupStyle)
     
     (: the initial value of 'analyzedSoFar' contains a single
        component, which is the component received as input :)
@@ -152,7 +155,7 @@ declare function f:deps($comp as element(),
             'atts': $comp/self::attribute
                 /QName(ancestor::xs:schema/@targetNamespace, @name)            
         }
-    let $depsRaw := f:_depsRC($directDeps, $analyzedSoFar, $sgroups, $schemas)    
+    let $depsRaw := f:_depsRC($directDeps, $analyzedSoFar, $sgroups, $sgroupStyle, $schemas)    
     
     let $deps :=        
         if (not($comp/self::xs:element)) then $depsRaw else
@@ -187,7 +190,8 @@ declare function f:deps($comp as element(),
  :     direct or indirect dependencies of the given component
  :)
 declare function f:directDeps($comp as element(),
-                              $sgroups as map(xs:QName, xs:QName*)?)
+                              $sgroups as map(xs:QName, xs:QName*)?,
+                              $sgroupStyle as xs:string)
         as map(*) {
     (: a function item returning true if a given QName is not
        in the schema namespace :)
@@ -210,10 +214,17 @@ declare function f:directDeps($comp as element(),
     let $elems := distinct-values((
         $comp/descendant-or-self::xs:element/@ref/resolve-QName(., ..)
         [$isUserDefined(.)],
-        $comp//@substitutionGroup
-             /(for $e in tokenize(normalize-space(.), ' ') return resolve-QName($e, ..)),
-             if (empty($sgroups)) then () else $sgroups($comp/app:getComponentName(.))                
-        ))[not(. eq $comp/app:getComponentName(.))]               
+
+        if ($sgroupStyle eq 'ignore') then () else (
+        
+            (: add substitution groups of which this element is a member :)        
+            $comp//@substitutionGroup
+                 /(for $e in tokenize(normalize-space(.), ' ') return resolve-QName($e, ..)),
+                 
+            (: add the members of the substitution group of which this element is the head :)             
+            if (empty($sgroups)) then () else $sgroups($comp/app:getComponentName(.))                
+            ))[not(. eq $comp/app:getComponentName(.))]
+        )            
     let $atts := distinct-values(
         $comp/descendant-or-self::xs:attribute/@ref/resolve-QName(., ..))
         [$isUserDefined(.)]        
@@ -241,6 +252,7 @@ declare function f:directDeps($comp as element(),
 declare function f:_depsRC($depsSoFar as map(*), 
                            $analyzedSoFar as map(*),
                            $sgroups as map(xs:QName, xs:QName*)?,
+                           $sgroupStyle as xs:string,
                            $schemas as element(xs:schema)+)
         as map(*) {
     let $notYetAnalyzed :=
@@ -262,7 +274,7 @@ declare function f:_depsRC($depsSoFar as map(*),
         if (empty(($compsToBeAnalyzed))) then $depsSoFar
         else
         
-    let $directDeps := $compsToBeAnalyzed/f:directDeps(., $sgroups)
+    let $directDeps := $compsToBeAnalyzed/f:directDeps(., $sgroups, $sgroupStyle)
     let $newDepsSoFar :=
         map{
             'types': distinct-values(($depsSoFar?types, $directDeps?types)),
@@ -280,6 +292,6 @@ declare function f:_depsRC($depsSoFar as map(*),
             'atts': distinct-values(($analyzedSoFar?atts, $notYetAnalyzed?atts))            
         }
     return
-        f:_depsRC($newDepsSoFar, $newAnalyzedSoFar, $sgroups, $schemas)
+        f:_depsRC($newDepsSoFar, $newAnalyzedSoFar, $sgroups, $sgroupStyle, $schemas)
 };
 
