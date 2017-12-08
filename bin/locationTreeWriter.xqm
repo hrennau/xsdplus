@@ -149,6 +149,7 @@ declare function f:ltree($enames as element(nameFilter)*,
         <z:locationTrees count="{count($ltrees)}">{
             $ltrees
         }</z:locationTrees>
+    let $DUMMY := trace((), ' - GOING to add NSBs')
     return
         app:addNSBs($report, $nsmap)
 };     

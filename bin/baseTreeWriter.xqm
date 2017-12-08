@@ -65,7 +65,7 @@ declare function f:btreeOp($request as element())
     let $nsmap := app:getTnsPrefixMap($schemas)
     let $groupNorm := trace(tt:getParam($request, 'groupNormalization') , 'GROUP_NORM: ')    
     let $options :=
-        <options withStypeTrees="false"/>
+        <options withStypeTrees="false" sgroupStyle="ignore"/>
     
     let $ltreeReport := f:ltree($enames, $tnames, $gnames, $global, $options, 
                                 $groupNorm, $nsmap, $schemas)
