@@ -14,6 +14,7 @@
          <param name="gnames" type="nameFilter?" pgroup="comps"/>         
          <param name="global" type="xs:boolean?" default="false"/>   
          <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
+         <param name="stypeTrees" type="xs:boolean" default="true"/>         
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>       
          <pgroup name="in" minOccurs="1"/>    
@@ -62,10 +63,11 @@ declare function f:btreeOp($request as element())
     let $tnames := tt:getParam($request, 'tnames')    
     let $gnames := tt:getParam($request, 'gnames')  
     let $global := tt:getParam($request, 'global')    
+    let $stypeTrees := tt:getParam($request, 'stypeTrees')
     let $nsmap := app:getTnsPrefixMap($schemas)
     let $groupNorm := trace(tt:getParam($request, 'groupNormalization') , 'GROUP_NORM: ')    
-    let $options :=
-        <options withStypeTrees="false" sgroupStyle="ignore"/>
+    let $options := trace(
+        <options withStypeTrees="{$stypeTrees}" sgroupStyle="ignore"/> , 'OPTIONS: ')
     
     let $ltreeReport := f:ltree($enames, $tnames, $gnames, $global, $options, 
                                 $groupNorm, $nsmap, $schemas)
