@@ -12,6 +12,7 @@
          <param name="doc" type="docFOX" sep="WS" pgroup="input"/>
          <param name="dcat" type="docCAT*" sep="WS" pgroup="input"/>
          <param name="format" type="xs:string?" fct_values="xml, treesheet" default="treesheet"/>
+         <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>         
          <param name="rootElem" type="xs:NCName?"/>
          <param name="xsd" type="docFOX*" sep="SC" fct_minDocCount="1"/>
          <param name="colRhs" type="xs:integer" default="60"/>         
@@ -60,8 +61,10 @@ declare function f:frequencyTreeOp($request as element())
     let $docs := tt:getParams($request, 'doc dcat')
     let $rootElem := tt:getParams($request, 'rootElem')
     let $format := tt:getParams($request, 'format')
+    let $colRhs := trace(tt:getParams($request, 'colRhs') , 'COLRHS: ')
+    let $sgroupStyle := tt:getParams($request, 'sgroupStyle')
     return
-        f:frequencyTree($docs, $rootElem, $format, $schemas)
+        f:frequencyTree($docs, $rootElem, $format, $colRhs, $sgroupStyle, $schemas)
 };
 
 (:~
@@ -70,6 +73,8 @@ declare function f:frequencyTreeOp($request as element())
 declare function f:frequencyTree($docs as node()+,
                                  $rootElem as xs:NCName?,
                                  $format as xs:string,
+                                 $colRhs as xs:integer,
+                                 $sgroupStyle as xs:string,
                                  $schemas as element(xs:schema)*)
         as item()? {                                 
     let $nsmap := 
@@ -88,7 +93,8 @@ declare function f:frequencyTree($docs as node()+,
     let $ltrees :=
         if (not($schemas)) then () else
         
-        let $options := <options withStypeTrees="false"/>
+        let $options := <options withStypeTrees="false"
+                                 sgroupStyle="{$sgroupStyle}"/>
         let $global := true()
         let $elemNameFilters := $enames ! tt:parseNameFilter(.)
         return
@@ -133,7 +139,7 @@ declare function f:frequencyTree($docs as node()+,
     let $ltreeAttNames := QName($app:URI_LTREE, 'occ')
     let $otreeAttNamesMap := map{
         QName($app:URI_LTREE, 'z:dcount'): (),
-        QName($app:URI_LTREE, 'z:dfreq'): '0',
+        QName($app:URI_LTREE, 'z:dfreq'): '0.00',
         QName($app:URI_LTREE, 'z:ifreq'): ()
     }    
    
@@ -156,7 +162,7 @@ declare function f:frequencyTree($docs as node()+,
         
         (: format = treesheet :)
         else 
-            let $options := <options colRhs="60"/>
+            let $options := <options colRhs="{$colRhs}"/>
             let $itemReporter := f:treesheetItemReporter_itemFrequency#2
             return
                 app:ltree2Treesheet($report, $options, $itemReporter)
@@ -176,6 +182,7 @@ declare function f:attributeNodesObserver_itemFrequency($atts as attribute()*, $
     let $dcount := count($docs)
     let $dcountWithItem := count($atts/ancestor::* intersect $docs)        
     let $dfreq := round-half-to-even($dcountWithItem div $dcount, 2)
+                  ! format-number(., '1.00')
     return (
         attribute z:dcount {$dcountWithItem},
         attribute z:dfreq {$dfreq}
@@ -199,15 +206,20 @@ declare function f:elementNodesObserver_itemFrequency($elems as element()*, $doc
     let $itemFrequencies :=
         for $doc in $docsWithItem 
         group by $countItems := count($elems[ancestor::* intersect $doc])
-        return $countItems
-    let $itemFreqMean := avg($itemFrequencies) ! round-half-to-even(., 1)
-    let $itemFreqMin := min($itemFrequencies) ! round-half-to-even(., 1)
-    let $itemFreqMax := max($itemFrequencies) ! round-half-to-even(., 1)
+        return <itemFreq nItems="{$countItems}" nDocs="{count($doc)}"/>
+    let $itemFreqMean := 
+        (sum($itemFrequencies/(@nItems * @nDocs)) div $dcountWithItem) 
+        ! round-half-to-even(., 1)
+        ! format-number(., '1.0')
+    
+    let $itemFreqMin := min($itemFrequencies/@nItems) ! round-half-to-even(., 1)
+    let $itemFreqMax := max($itemFrequencies/@nItems) ! round-half-to-even(., 1)
     let $itemFreqInfo := 
         concat($itemFreqMean, 
                if ($itemFreqMax eq 1) then () else concat( 
                    ' (', $itemFreqMin, '-', $itemFreqMax, ')'))
-    let $dfreq := round-half-to-even($dcountWithItem div $dcount, 2)
+    let $dfreq := round-half-to-even($dcountWithItem div $dcount, 2) 
+                  ! format-number(., '1.00')
     return    
         if ($elems intersect $docs) then
             attribute z:dcount {count($elems)}
@@ -230,9 +242,10 @@ declare function f:treesheetItemReporter_itemFrequency($node, $options)
     if ($node/parent::z:locationTree) then 
         concat('dcount: ', $node/@z:dcount)
     else if ($node/@z:dfreq) then
-        let $dfreq := $node/@z:dfreq/xs:decimal(.)
+        let $dfreq := $node/@z:dfreq
+        let $dfreqDec := $node/@z:dfreq/xs:decimal(.)
         let $barLenMax := 20
-        let $barLen := ($barLenMax * $dfreq) ! round-half-to-even(., 0) ! xs:integer(.)
+        let $barLen := ($barLenMax * $dfreqDec) ! round-half-to-even(., 0) ! xs:integer(.)
         let $bar := concat(
             string-join(for $i in 1 to $barLen return '*', ''),
             string-join(for $i in 1 to $barLenMax - $barLen return ' ', '')

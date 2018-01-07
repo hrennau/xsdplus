@@ -12,6 +12,7 @@
          <param name="doc" type="docFOX" sep="WS" pgroup="input"/>
          <param name="dcat" type="docCAT*" sep="WS" pgroup="input"/>
          <param name="format" type="xs:string?" fct_values="xml, treesheet" default="treesheet"/>
+         <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>         
          <param name="rootElem" type="xs:NCName?"/>
          <param name="inamesTokenize" type="nameFilter?" />
          <param name="nterms" type="xs:integer?" default="5"/>
@@ -62,10 +63,12 @@ declare function f:valuesTreeOp($request as element())
     let $docs := tt:getParams($request, 'doc dcat')
     let $rootElem := tt:getParams($request, 'rootElem')
     let $format := tt:getParams($request, 'format')
+    let $colRhs := tt:getParams($request, 'colRhs')
+    let $sgroupStyle := tt:getParams($request, 'sgroupStyle')
     let $nterms := tt:getParams($request, 'nterms')
     let $inamesTokenize := tt:getParams($request, 'inamesTokenize')
     return
-        f:valuesTree($docs, $rootElem, $format, $nterms, $inamesTokenize, $schemas)
+        f:valuesTree($docs, $rootElem, $format, $colRhs, $sgroupStyle, $nterms, $inamesTokenize, $schemas)
 };
 
 (:~
@@ -74,6 +77,8 @@ declare function f:valuesTreeOp($request as element())
 declare function f:valuesTree($docs as node()+,
                               $rootElem as xs:NCName?,
                               $format as xs:string,
+                              $colRhs as xs:integer,
+                              $sgroupStyle as xs:string,
                               $nterms as xs:integer,
                               $inamesTokenize as element(nameFilter)?,
                               $schemas as element(xs:schema)*)
@@ -94,7 +99,8 @@ declare function f:valuesTree($docs as node()+,
     let $ltrees :=
         if (not($schemas)) then () else
         
-        let $options := <options withStypeTrees="false"/>
+        let $options := <options withStypeTrees="false"
+                                 sgroupStyle="{$sgroupStyle}"/>
         let $global := true()
         let $elemNameFilters := $enames ! tt:parseNameFilter(.)
         return
@@ -160,7 +166,7 @@ declare function f:valuesTree($docs as node()+,
         
         (: format = treesheet :)
         else 
-            let $options := <options colRhs="60"/>
+            let $options := <options colRhs="{$colRhs}"/>
             let $itemReporter := f:treesheetItemReporter_itemValues#2
             return
                 app:ltree2Treesheet($report, $options, $itemReporter)
@@ -239,5 +245,7 @@ declare function f:getItemValuesDescriptor($items as node()*,
  :)
 declare function f:treesheetItemReporter_itemValues($node, $options)
         as xs:string* {
-    $node[@z:values]/concat('values: ', @z:values)
+    if ($node/(* except z:_attributes_) and not($node/@z:values ne '')) then '-'
+    else if (not($node/@z:values)) then '-'
+    else $node/concat('values: ', @z:values)
 };

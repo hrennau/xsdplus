@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2017-12-08T12:54:59.425+01:00 
+ : @version 2018-01-06T23:54:27.577+01:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -25,6 +25,7 @@ import module namespace a1="http://www.xsdplus.org/ns/xquery-functions" at
     "jsonSchema_old.xqm",
     "locationTreeComponents.xqm",
     "locationTreeWriter.xqm",
+    "mockWriter.xqm",
     "pathDictionary.xqm",
     "schemaLoader.xqm",
     "simpleTypeInfo.xqm",
@@ -213,6 +214,7 @@ declare variable $toolScheme :=
       <param name="doc" type="docFOX" sep="WS" pgroup="input"/>
       <param name="dcat" type="docCAT*" sep="WS" pgroup="input"/>
       <param name="format" type="xs:string?" fct_values="xml, treesheet" default="treesheet"/>
+      <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>
       <param name="rootElem" type="xs:NCName?"/>
       <param name="xsd" type="docFOX*" sep="SC" fct_minDocCount="1"/>
       <param name="colRhs" type="xs:integer" default="60"/>
@@ -284,6 +286,10 @@ declare variable $toolScheme :=
       <pgroup name="in" minOccurs="1"/>
       <pgroup name="comps" maxOccurs="1"/>
     </operation>
+    <operation name="exportMocks" type="xs:integer" func="exportMocksOp" mod="mockWriter.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
+      <param name="dir" type="directory" fct_dirExists="true"/>
+      <param name="mocks" type="docFOX" fct_minDocCount="1"/>
+    </operation>
     <operation name="pathDict" type="item()" func="pathDict" mod="pathDictionary.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
       <param name="ancFilter" type="nameFilter?"/>
       <param name="btree" type="docFOX" fct_minDocCount="1"/>
@@ -345,6 +351,7 @@ declare variable $toolScheme :=
       <param name="doc" type="docFOX" sep="WS" pgroup="input"/>
       <param name="dcat" type="docCAT*" sep="WS" pgroup="input"/>
       <param name="format" type="xs:string?" fct_values="xml, treesheet" default="treesheet"/>
+      <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>
       <param name="rootElem" type="xs:NCName?"/>
       <param name="inamesTokenize" type="nameFilter?"/>
       <param name="nterms" type="xs:integer?" default="5"/>
@@ -365,6 +372,8 @@ declare variable $toolScheme :=
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
       <param name="global" type="xs:boolean?" default="true"/>
       <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
+      <param name="noprefix" type="xs:boolean?" default="false"/>
+      <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>
       <param name="sortAtts" type="xs:boolean?" default="false"/>
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
@@ -717,6 +726,17 @@ declare function m:execOperation_ltree($request as element())
 };
      
 (:~
+ : Executes operation 'exportMocks'.
+ :
+ : @param request the request element
+ : @return the operation result
+ :)
+declare function m:execOperation_exportMocks($request as element())
+        as xs:integer {
+    a1:exportMocksOp($request)        
+};
+     
+(:~
  : Executes operation 'pathDict'.
  :
  : @param request the request element
@@ -868,6 +888,7 @@ declare function m:execOperation($req as element())
         else if ($opName eq 'jschemas') then m:execOperation_jschemas($req)
         else if ($opName eq 'lcomps') then m:execOperation_lcomps($req)
         else if ($opName eq 'ltree') then m:execOperation_ltree($req)
+        else if ($opName eq 'exportMocks') then m:execOperation_exportMocks($req)
         else if ($opName eq 'pathDict') then m:execOperation_pathDict($req)
         else if ($opName eq 'load') then m:execOperation_load($req)
         else if ($opName eq 'stypeTree') then m:execOperation_stypeTree($req)

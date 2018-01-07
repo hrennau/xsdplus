@@ -15,6 +15,8 @@
          <param name="gnames" type="nameFilter?" pgroup="comps"/>         
          <param name="global" type="xs:boolean?" default="true"/>         
          <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
+         <param name="noprefix" type="xs:boolean?" default="false"/>
+         <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>         
          <param name="sortAtts" type="xs:boolean?" default="false"/>
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
@@ -34,6 +36,7 @@ import module namespace tt="http://www.ttools.org/xquery-functions" at
     "tt/_pcollection.xqm";
     
 import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at 
+    "constants.xqm",
     "locationTreeComponents.xqm",
     "occUtilities.xqm";
     
@@ -63,12 +66,17 @@ declare function f:vtreeOp($request as element())
     let $tnames := tt:getParam($request, 'tnames')    
     let $gnames := tt:getParam($request, 'gnames')  
     let $global := tt:getParam($request, 'global')    
+    let $noprefix := tt:getParam($request, 'noprefix')
     let $nsmap := app:getTnsPrefixMap($schemas)
     let $groupNorm := trace(tt:getParam($request, 'groupNormalization') , 'GROUP NORMALIZATION: ')
+    let $sgroupStyle := tt:getParam($request, 'sgroupStyle')    
     let $attRep := tt:getParam($request, 'attRep')    
     
     let $options :=
-        <options withStypeTrees="false" attRep="{$attRep}"/>
+        <options withStypeTrees="false" 
+                 attRep="{$attRep}" 
+                 noprefix="{$noprefix}"
+                 sgroupStyle="{$sgroupStyle}"/>
     
     let $ltree := f:ltree($enames, $tnames, $gnames, $global, $options, 
                           $groupNorm, $nsmap, $schemas)
@@ -88,7 +96,12 @@ declare function f:ltree2Vtree($ltree as element(), $options as element(options)
         as element() {
     if ($ltree/self::zz:baseTrees) then app:btree2Vtree($ltree, $options) else
     
-    f:ltree2VtreeRC($ltree, $options)        
+    let $raw := f:ltree2VtreeRC($ltree, $options)
+    return
+        let $noprefix := $options/@noprefix/xs:boolean(.)
+        return
+            if ($noprefix) then f:vtree_stripPrefixes($raw)
+            else $raw
 };
 
 (:~
@@ -210,4 +223,33 @@ declare function f:ltree2VtreeRC_attributes($n as element(z:_attributes_), $opti
                         $content
                     }        
 };        
+
+(:~
+ : Creates a copy of a collection of view trees with all non-z prefixes removed.
+ :)
+declare function f:vtree_stripPrefixes($trees as element(z:trees))
+        as element(z:trees) {
+    f:vtree_stripPrefixesRC($trees)
+};
+
+(:~
+ : Recursive helper fnction of 'vtree_stripPrefixes'.
+ :)
+declare function f:vtree_stripPrefixesRC($n as node())
+        as node() {
+    typeswitch($n)
+    case document-node() return
+        document {for $c in $n/node() return f:vtree_stripPrefixesRC($c)}
+    case element() return
+        let $ns := namespace-uri($n)
+        let $useNs := $ns[. eq $app:URI_LTREE]
+        let $useLname := string-join(('z'[$ns eq $app:URI_LTREE], local-name($n)), ':')
+        return
+            element {QName($useNs, $useLname)} {
+                for $a in $n/@* return f:vtree_stripPrefixesRC($a),
+                for $c in $n/node() return f:vtree_stripPrefixesRC($c)
+            }
+    default return $n            
+};
+
 
