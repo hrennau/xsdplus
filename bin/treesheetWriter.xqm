@@ -229,7 +229,7 @@ declare function f:ltree2TreesheetRC($n as node(),
             f:ltree2TreesheetRC($c, 0, $prefix, $options, $itemReporter)
     
     case element(z:locationTree) return
-        let $compKind := $n/@compKind
+        let $compKind := trace($n/@compKind , 'COMP_KIND: ')
         let $compLabel :=
             switch($compKind)
             case 'elem' return 'Element'
@@ -237,16 +237,20 @@ declare function f:ltree2TreesheetRC($n as node(),
             case 'group' return 'Group'
             default return 'UNKNOWN-COMP-KIND: '
 
-        let $qname := f:resolveNormalizedQName($n/@z:name, $n/z:nsMap)
-        let $lname := local-name-from-QName($qname)
-        let $uri := namespace-uri-from-QName($qname)
-        let $nsInfo := 
-            if (not($uri)) then () 
-            else
+        let $lname := replace($n/@z:name, '.+:', '')
+        let $nsInfo :=
+            let $nsMap := $n/z:nsMap
+            return if (not($nsMap)) then () else
+            
+            let $qname := trace(f:resolveNormalizedQName($n/@z:name, $nsMap) , 'QNAME: ')
+            let $uri := namespace-uri-from-QName($qname)
+            return
+                if (not($uri)) then () else
+                
                 let $namespacePrefixLength := $options/@namespacePrefixLength/xs:integer(.)
                 let $namespaceLabel := ($options/@namespaceLabel/string(), 'namespace')[1]
                 let $showURI := if (empty($namespacePrefixLength)) then $uri 
-                                else substring($uri, $namespacePrefixLength)
+                                    else substring($uri, $namespacePrefixLength)
                 return
                     concat('   ', $namespaceLabel, ': ', $showURI)
         return (
