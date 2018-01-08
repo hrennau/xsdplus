@@ -14,6 +14,8 @@
          <param name="gnames" type="nameFilter?" pgroup="comps"/>         
          <param name="global" type="xs:boolean?" default="true"/>         
          <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
+         <param name="namespacePrefixLength" type="xs:integer?"/>ss
+         <param name="namespaceLabel" type="xs:string?"/>
          <param name="sortAtts" type="xs:boolean?" default="false"/>
          <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>         
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
@@ -80,6 +82,8 @@ declare function f:treesheetOp($request as element())
     let $report := tt:getParam($request, 'report')
     let $lang := tt:getParam($request, 'lang')
     let $sgroupStyle := tt:getParam($request, 'sgroupStyle')    
+    let $namespacePrefixLength := tt:getParam($request, 'namespacePrefixLength')
+    let $namespaceLabel := tt:getParam($request, 'namespaceLabel')
     
     let $itemReporter := 
         for $r in $report return
@@ -112,7 +116,7 @@ declare function f:treesheetOp($request as element())
     
     return
         f:treesheet($enames, $tnames, $gnames, $global, $colRhs, 
-            $sgroupStyle, $itemReporter, $nsmap, $schemas)
+            $sgroupStyle, $namespacePrefixLength, $namespaceLabel, $itemReporter, $nsmap, $schemas)
 };
 
 declare function f:reportAnno($n as node(), $options as element(options)?, $lang as xs:string?) 
@@ -166,16 +170,22 @@ declare function f:treesheet($enames as element(nameFilter)*,
                              $global as xs:boolean?,
                              $colRhs as xs:integer?,
                              $sgroupStyle as xs:string,
+                             $namespacePrefixLength as xs:integer?,
+                             $namespaceLabel as xs:string?,
                              $itemReporter as function(*)*,
-                             $nsmap as element(z:nsMap)?,
+                             $nsmap as element(z:nsMap)?,   
                              $schemas as element(xs:schema)+)
         as xs:string {
     let $options :=
         <options withStypeTrees="false"
                  withAnnos="true"
                  colRhs="{$colRhs}"
-                 sgroupStyle="{$sgroupStyle}"
-        />
+                 sgroupStyle="{$sgroupStyle}">{
+            if (empty($namespacePrefixLength)) then () else
+                attribute namespacePrefixLength {$namespacePrefixLength},
+            if (empty($namespaceLabel)) then () else
+                attribute namespaceLabel {$namespaceLabel}
+        }</options>
     let $nsmap := if ($nsmap) then $nsmap else app:getTnsPrefixMap($schemas)
     let $ltree := app:ltree($enames, $tnames, $gnames, $global, $options, 
                             (), $nsmap, $schemas)
@@ -226,10 +236,21 @@ declare function f:ltree2TreesheetRC($n as node(),
             case 'type' return 'Type'
             case 'group' return 'Group'
             default return 'UNKNOWN-COMP-KIND: '
-        let $nname := $n/@z:name
-        let $lname := replace($nname, '.*:', '')
+
+        let $qname := f:resolveNormalizedQName($n/@z:name, $n/z:nsMap)
+        let $lname := local-name-from-QName($qname)
+        let $uri := namespace-uri-from-QName($qname)
+        let $nsInfo := 
+            if (not($uri)) then () 
+            else
+                let $namespacePrefixLength := $options/@namespacePrefixLength/xs:integer(.)
+                let $namespaceLabel := ($options/@namespaceLabel/string(), 'namespace')[1]
+                let $showURI := if (empty($namespacePrefixLength)) then $uri 
+                                else substring($uri, $namespacePrefixLength)
+                return
+                    concat('   ', $namespaceLabel, ': ', $showURI)
         return (
-            concat($compLabel, ': ', $lname),
+            concat($compLabel, ': ', $lname, $nsInfo),
             '===================================================',
             for $c in $n/* return 
                 f:ltree2TreesheetRC($c, 0, (), $options, $itemReporter)

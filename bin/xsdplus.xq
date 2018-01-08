@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2018-01-06T23:54:27.577+01:00 
+ : @version 2018-01-08T13:07:27.262+01:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -337,6 +337,8 @@ declare variable $toolScheme :=
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
       <param name="global" type="xs:boolean?" default="true"/>
       <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
+      <param name="namespacePrefixLength" type="xs:integer?"/>ss
+         <param name="namespaceLabel" type="xs:string?"/>
       <param name="sortAtts" type="xs:boolean?" default="false"/>
       <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
