@@ -9,7 +9,7 @@
 (:~@operations
    <operations>   
       <operation name="vtree" type="node()" func="vtreeOp">
-         <param name="attRep" type="xs:string?" default="elem" fct_values="att, elem, elemSorted"/>      
+         <param name="attRep" type="xs:string?" default="elem" fct_values="att, count, elem, elemSorted"/>      
          <param name="enames" type="nameFilter?" pgroup="comps"/> 
          <param name="tnames" type="nameFilter?" pgroup="comps"/>         
          <param name="gnames" type="nameFilter?" pgroup="comps"/>         
@@ -211,17 +211,19 @@ declare function f:ltree2VtreeRC_attributes($n as element(z:_attributes_), $opti
                                 else '?'
                 return
                     concat($s/@z:name, $postFix)
-                let $itemsConcat := string-join($items, ', ')
-                return
-                    attribute atts {$itemsConcat}
-            else    
-                let $content :=
-                    for $s in $sourceAtts return f:ltree2VtreeRC($s, $options)
-                return        
-                    element {node-name($n)} {
-                        for $a in $n/@* return f:ltree2VtreeRC($a, $options),
-                        $content
-                    }        
+            let $itemsConcat := string-join($items, ', ')
+            return
+                attribute atts {$itemsConcat}
+        else if ($options/@attRep eq 'count') then
+            attribute countAtts {count($sourceAtts)} [$sourceAtts]
+        else    
+            let $content :=
+                for $s in $sourceAtts return f:ltree2VtreeRC($s, $options)
+            return        
+                element {node-name($n)} {
+                    for $a in $n/@* return f:ltree2VtreeRC($a, $options),
+                    $content
+                }        
 };        
 
 (:~

@@ -1,4 +1,4 @@
-(:
+(:~
  : -------------------------------------------------------------------------
  :
  : locationTreeWriter.xqm - operation which writes location trees
@@ -73,7 +73,7 @@ declare function f:ltreeOp($request as element())
     let $withStypeTrees := tt:getParams($request, 'stypeTrees')    
     let $withAnnos := tt:getParams($request, 'annos')    
     let $nsmap := app:getTnsPrefixMap($schemas)
-    let $groupNorm := trace(tt:getParam($request, 'groupNormalization') , 'GROUP NORMALIZATION: ')
+    let $groupNorm := tt:getParam($request, 'groupNormalization')
     let $propertyFilter := tt:getParam($request, 'propertyFilter')
     let $sgroupStyle := tt:getParam($request, 'sgroupStyle')
     
@@ -149,7 +149,7 @@ declare function f:ltree($enames as element(nameFilter)*,
         <z:locationTrees count="{count($ltrees)}">{
             $ltrees
         }</z:locationTrees>
-    let $DUMMY := trace((), ' - GOING to add NSBs')
+    (: let $DUMMY := trace((), ' - GOING to add NSBs') :)
     return
         app:addNSBs($report, $nsmap)
 };     
@@ -167,7 +167,7 @@ declare function f:lcomps2Ltree($comp as element(),
                                 $options as element(options),
                                 $nsmap as element(z:nsMap))
         as element() {
-    let $compKindLabel := local-name($comp) 
+    let $compKindLabel := local-name($comp) ! replace(., 'lcompsFor', '') ! lower-case(.)
         (: elem | type | group :)
     let $compName := tt:resolveNormalizedQNamePrefixed($comp/@z:name, $nsmap)
         (: elem, type or group name :)
@@ -181,6 +181,9 @@ declare function f:lcomps2Ltree($comp as element(),
             for $elem in $comp/z:elems/z:elem
             return map:entry($elem/@z:name, $elem)
         )
+    let $DUMMY := file:write('DEBUG_COMP.xml', $comp)        
+    let $DUMMY := file:write('DEBUG_ELEM_DICT.xml', 
+        <elemDict>{(map:keys($elemDict) => sort()) ! <entry key="{.}">{$elemDict(.)}</entry>}</elemDict>)
     let $typeDict := 
         map:merge(
             for $type in $comp/z:types/z:type
@@ -246,7 +249,7 @@ declare function f:lcomps2LtreeRC($n as node(),
     typeswitch($n)
     
     (: element represents an ELEMENT component to be translated into a location tree :)
-    case $comp as element(elem) return
+    case $comp as element(z:lcompsForElem) return
         let $compName := tt:resolveNormalizedQNamePrefixed($comp/@z:name, $nsmap)    
         let $type :=
             if ($comp/@z:type) then map:get($typeDict, $comp/@z:type)
@@ -265,7 +268,7 @@ declare function f:lcomps2LtreeRC($n as node(),
             }
             
     (: element represents a TYPE component to be translated into a location tree :)            
-    case $comp as element(type) return
+    case $comp as element(z:lcompsForType) return
         let $compName := tt:resolveNormalizedQNamePrefixed($comp/@z:name, $nsmap)    
         let $type := map:get($typeDict, $comp/@z:name)
         (:content :)
@@ -280,7 +283,7 @@ declare function f:lcomps2LtreeRC($n as node(),
             }</typedElement>
     
     (: element represents a GROUP component to be translated into a location tree :)    
-    case $comp as element(group) return
+    case $comp as element(z:lcompsForGroup) return
         let $compName := tt:resolveNormalizedQNamePrefixed($comp/@z:name, $nsmap)  
         let $group := map:get($groupDict, $comp/@z:name)
         let $content := f:lcomps2LtreeRC(

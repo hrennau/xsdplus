@@ -162,7 +162,9 @@ declare function f:deps($comp as element(),
             let $compName := $comp/app:getComponentName(.)
             return
                 map:merge((
-                    map:entry('elems', $depsRaw?elems[not(. eq $compName)]),                
+                    (: map:entry('elems', $depsRaw?elems[not(. eq $compName)]), :)   
+                    (: hjr, 20180112 - bugfix; revealed by XSD obtaind from Kaercher DTD :)
+                    map:entry('elems', $depsRaw?elems),
                     $depsRaw
                     ),
                     map{'duplicates':'use-first'}

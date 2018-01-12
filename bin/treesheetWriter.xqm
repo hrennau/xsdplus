@@ -77,7 +77,7 @@ declare function f:treesheetOp($request as element())
     let $gnames := tt:getParam($request, 'gnames')  
     let $global := tt:getParam($request, 'global')    
     let $nsmap := app:getTnsPrefixMap($schemas)
-    let $groupNorm := trace(tt:getParam($request, 'groupNormalization') , 'GROUP NORMALIZATION: ')
+    let $groupNorm := tt:getParam($request, 'groupNormalization')
     let $colRhs := tt:getParam($request, 'colRhs')
     let $report := tt:getParam($request, 'report')
     let $lang := tt:getParam($request, 'lang')
@@ -229,7 +229,7 @@ declare function f:ltree2TreesheetRC($n as node(),
             f:ltree2TreesheetRC($c, 0, $prefix, $options, $itemReporter)
     
     case element(z:locationTree) return
-        let $compKind := trace($n/@compKind , 'COMP_KIND: ')
+        let $compKind := $n/@compKind
         let $compLabel :=
             switch($compKind)
             case 'elem' return 'Element'
@@ -242,7 +242,7 @@ declare function f:ltree2TreesheetRC($n as node(),
             let $nsMap := $n/z:nsMap
             return if (not($nsMap)) then () else
             
-            let $qname := trace(f:resolveNormalizedQName($n/@z:name, $nsMap) , 'QNAME: ')
+            let $qname := f:resolveNormalizedQName($n/@z:name, $nsMap)
             let $uri := namespace-uri-from-QName($qname)
             return
                 if (not($uri)) then () else

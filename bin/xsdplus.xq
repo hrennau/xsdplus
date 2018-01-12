@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2018-01-08T13:07:27.262+01:00 
+ : @version 2018-01-12T18:56:21.145+01:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -368,7 +368,7 @@ declare variable $toolScheme :=
       <param name="sortAtts" type="xs:boolean?" default="false"/>
     </operation>
     <operation name="vtree" type="node()" func="vtreeOp" mod="viewTreeWriter.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
-      <param name="attRep" type="xs:string?" default="elem" fct_values="att, elem, elemSorted"/>
+      <param name="attRep" type="xs:string?" default="elem" fct_values="att, count, elem, elemSorted"/>
       <param name="enames" type="nameFilter?" pgroup="comps"/>
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>

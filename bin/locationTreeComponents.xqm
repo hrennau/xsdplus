@@ -159,7 +159,10 @@ declare function f:lcomps($enames as element(nameFilter)*,
         case 'complexType' return 'type'
         case 'group' return 'group'
         default return ()
-        
+    let $compKindElemName := concat(
+        'z:lcompsFor', 
+        upper-case(substring($compKindLabel, 1, 1)), 
+        substring($compKindLabel, 2))    
     let $sgroupStyle := $options/@sgroupStyle/string()        
     let $report :=
         for $comp in $comps
@@ -301,8 +304,8 @@ declare function f:lcomps($enames as element(nameFilter)*,
                 <z:sgroups count="{count($selSgroups)}">{$selSgroups}</z:sgroups>
             
         return
-            (: $compKindLabel = element | simpleType | complexType | group :)
-            element {$compKindLabel} {
+            (: $compKindElemName = lcompsForElem, lcompsForType, lcompsForGroup :)
+            element {$compKindElemName} {
                 attribute z:name {$normalizedName},     
                 attribute z:loc {$loc},
                 $elemType,
