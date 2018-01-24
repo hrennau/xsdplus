@@ -8,24 +8,15 @@
  
 (:~@operations
    <operations>
-      <operation name="jschema2" type="item()" func="jschema">
+      <operation name="jschema" type="item()" func="jschemaOp">
          <param name="xsd" type="docFOX*" sep="SC" fct_minDocCount="1" pgroup="xsd"/>      
          <param name="ltree" type="docURI*" fct_rootElem="locationTrees" sep="WS" pgroup="xsd"/>
          <param name="ename" type="nameFilter?"/>         
          <param name="format" type="xs:string?" fct_values="xml, json" default="json"/>         
-         <param name="mode" type="xs:string?" default="rq" fct_values="rq,rs, ot"/>        
+         <param name="mode" type="xs:string?" default="rq" fct_values="rq, rs, ot"/>        
          <param name="skipRoot" type="xs:boolean?" default="false"/>         
          <param name="top" type="xs:boolean?" default="true"/>
          <pgroup name="xsd" maxOccurs="1"/>         
-      </operation>
-      <operation name="jschemas2" type="item()" func="jschema">     
-         <param name="dir" type="xs:string"/>      
-         <param name="btree" type="docURI*" fct_rootElem="baseTrees" sep="WS"/>
-         <param name="ename" type="nameFilter?"/>         
-         <param name="format" type="xs:string?" fct_values="xml, json" default="json"/>         
-         <param name="mode" type="xs:string?" default="rq" fct_values="rq,rs, ot"/>       
-         <param name="skipRoot" type="xs:boolean?" default="false"/>         
-         <param name="top" type="xs:boolean?" default="true"/>        
       </operation>
     </operations>  
 :)  
@@ -46,10 +37,10 @@ import module namespace ap="http://www.xsdplus.org/ns/xquery-functions" at
 
 declare namespace z="http://www.xsdplus.org/ns/structure";
 
-declare variable $f:debugDir_2 := (); (:  '/projects/gateway/json-schema'; :)
-declare variable $f:debugSerMethodText_2 := map { "method": "text"};
+declare variable $f:debugDir := (); (:  '/projects/gateway/json-schema'; :)
+declare variable $f:debugSerMethodText := map { "method": "text"};
 
-declare variable $f:typeDictionary_2 :=
+declare variable $f:typeDictionary :=
         <types>
             <type x="boolean" j="boolean"/>
             <type x="integer" j="integer"/>            
@@ -86,7 +77,7 @@ declare variable $f:typeDictionary_2 :=
             <type x="decimal" j="number"/>            
         </types>;
 
-declare variable $f:constraintTypes_2 :=
+declare variable $f:constraintTypes :=
     <constraints>
         <enum type="array"/>    
         <maxItems type="integer"/>
@@ -110,38 +101,38 @@ declare variable $f:constraintTypes_2 :=
  :)
     
 (:~
- : Transforms an XSD schema into a JSON schema.
+ : Implements operation 'jschema' - transformation of an XSD schema into a 
+ : JSON Schema.
  :
  : @param request the operation request
  : @return a report describing ...
  :) 
-declare function f:jschema($request as element())
+declare function f:jschemaOp($request as element())
         as item() {
-    (: $f:debugDir ! file:write(concat(., '/log.xml'), '<log>', $f:debugSerMethodText),:)        
-    let $ltree := 
-        let $try := tt:getParams($request, 'ltree')
-        return
-            if ($try) then $try else
-            
-            let $schemas := ap:getSchemas($request)
-            let $enames := tt:getParam($request, 'enames')
-            let $tnames := tt:getParam($request, 'tnames')    
-            let $gnames := tt:getParam($request, 'gnames')  
-            let $global := tt:getParam($request, 'global')    
-            let $nsmap := ap:getTnsPrefixMap($schemas)
-            let $groupNorm := trace(tt:getParam($request, 'groupNormalization') , 'GROUP_NORM: ')    
-            let $options :=
-                <options withStypeTrees="true" sgroupStyle="ignore"/>
-    
-            let $ltreeReport := ap:ltree($enames, $tnames, $gnames, $global, $options, 
-                                         $groupNorm, $nsmap, $schemas)
-            return $ltreeReport
-            
+    (: $f:debugDir ! file:write(concat(., '/log.xml'), '<log>', $f:debugSerMethodText),:)
     let $ename := tt:getParams($request, 'ename')    
     let $top := tt:getParams($request, 'top')
     let $skipRoot := tt:getParams($request, 'skipRoot')    
     let $format := tt:getParams($request, 'format')
 
+    let $ltree := 
+        let $try := tt:getParams($request, 'ltree')
+        return if ($try) then $try else
+            
+        let $schemas := ap:getSchemas($request)
+        let $nsmap := ap:getTnsPrefixMap($schemas)        
+        let $options :=
+            <options withStypeTrees="true" sgroupStyle="ignore"/>
+
+        let $tnames := ()    
+        let $gnames := ()  
+        let $global := ()    
+        let $groupNorm := ()    
+    
+        let $ltreeReport := ap:ltree($ename, $tnames, $gnames, $global, $options, 
+                                     $groupNorm, $nsmap, $schemas)
+        return $ltreeReport
+            
     let $ltreeRootElem := 
         let $ltreeRootElems := $ltree/descendant::z:locationTree/f:getLtreeRoot(.)
         return
@@ -151,51 +142,8 @@ declare function f:jschema($request as element())
             else    
                 $ltree/descendant::z:locationTree[1]/f:getLtreeRoot(.)
     return
-        f:getJschema_2($ltreeRootElem, $skipRoot, $format)
+        f:getJschema($ltreeRootElem, $skipRoot, $format)
 };      
-
-(:
-(:~
- : Creates for each top level element descriptor of a base tree a JSON schema.
- :
- : @param request the operation request
- : @return a report describing ...
- :) 
-declare function f:jschemas($request as element())
-        as element() {
-    let $dir := tt:getParams($request, 'dir')    
-    let $btree := tt:getParams($request, 'btree')/*
-    let $skipRoot := tt:getParams($request, 'skipRoot')    
-    let $format := tt:getParams($request, 'format')
-    let $ename := trace(tt:getParams($request, 'ename') , 'ENAME: ')
-    let $top := tt:getParams($request, 'top')    
-    (:
-    let $btreeElems := $btree//z:baseTree/f:getBtreeRoot(.)
-    :)
-    let $btreeElems :=
-        let $btreeRootElems := $btree/descendant::z:baseTree/f:getBtreeRoot(.)
-        return
-            if ($ename) then
-                if ($top) then $btreeRootElems[tt:matchesNameFilter(local-name(.), $ename)][1]
-                else ($btreeRootElems/descendant-or-self::*[tt:matchesNameFilter(local-name(.), $ename)])[1]            
-            else    
-                $btreeRootElems
-
-    let $jschemas :=
-        for $btreeElem in $btreeElems
-        let $elemName := trace($btreeElem/local-name(.), 'create json schema for elem: ')
-        let $jschema := f:getJschema($btreeElem, $skipRoot, $format)
-        let $fname := concat($dir, '/', $elemName, '_schema.json')
-        return ( 
-            (: file:write($fname, $jschema), :)
-            <z:jschema elem="{$elemName}" uri="{$fname}"/>
-        )
-    return
-        <z:jschemas count="{count($jschemas)}">{
-            $jschemas
-        }</z:jschemas>
-};
-:)
 
 (:
  : ============================================================================
@@ -206,16 +154,21 @@ declare function f:jschemas($request as element())
  :)
 
 (:~
- : Transforms a location tree element descriptor into a JSON schema.
+ : Transforms a location tree into a JSON Schema.
  :
  : @param ltreeElem the location tree element descriptor for which a JSON schema is requested
- : @return the JSON schema representing the location tree element descriptor
+ : @param skipRoot if true, the document is not "wrapped" by a single top-level field;
+ :     in this case, the JSON document described by the JSON Schema does not represent 
+ :     the XML root element 
+ : @param format if xml, the internal XML representation of the JSON Schema is returned, 
+ :    otherwise the JSON representation
+ : @return the JSON schema constraining the JSON equivalent of XSD constrained XML documents
  :) 
-declare function f:getJschema_2($ltreeElem as element(),
+declare function f:getJschema($ltreeElem as element(),
                               $skipRoot as xs:boolean?,
                               $format as xs:string?)
         as item() {   
-    let $jsx := f:_xsd2Jschema_2($ltreeElem, $skipRoot)
+    let $jsx := f:_xsd2Jschema($ltreeElem, $skipRoot)
     return (
         if ($format eq 'xml') then $jsx
         else json:serialize($jsx) ! replace(., '\\/', '/')
@@ -231,14 +184,17 @@ declare function f:getJschema_2($ltreeElem as element(),
  :)
 
 (:~
- : Transforms a location tree into a JSON schema.
+ : Transforms a location tree into the internal XML representation of a JSON Schema.
  :
  : @param lroot the root element of the location tree
- : @return a JSON schema capturing the constraints of the source XSD
+ : @param skipRoot if true, the document is not "wrapped" by a single top-level field;
+ :     in this case, the JSON document described by the JSON Schema does not represent 
+ :     the XML root element 
+ : @return the JSON schema constraining the JSON equivalent of XSD constrained XML documents
  :)
-declare function f:_xsd2Jschema_2($lroot as element(), $skipRoot as xs:boolean?)
+declare function f:_xsd2Jschema($lroot as element(), $skipRoot as xs:boolean?)
         as element() {
-    let $contents := f:_xsd2JschemaRC_2($lroot)
+    let $contents := f:_xsd2JschemaRC($lroot)
     let $raw :=
         <json type="object">{
             <_0024schema>http://json-schema.org/draft-04/schema#</_0024schema>,
@@ -247,7 +203,7 @@ declare function f:_xsd2Jschema_2($lroot as element(), $skipRoot as xs:boolean?)
                 <properties type="object">{$contents}</properties>
             ) else $contents/*
         }</json>
-    let $jschema := f:_finalizeJschema_2($raw)
+    let $jschema := f:_finalizeJschema($raw)
     return
         $jschema
 };
@@ -255,7 +211,7 @@ declare function f:_xsd2Jschema_2($lroot as element(), $skipRoot as xs:boolean?)
 (:~
  : Finalizes the a JSON schema provided and delivered in the xjson format.
  :)
-declare function f:_finalizeJschema_2($jschema as element(json))
+declare function f:_finalizeJschema($jschema as element(json))
         as element(json) {
     let $stypeElems := $jschema//*[@___stype]
     return
@@ -275,22 +231,22 @@ declare function f:_finalizeJschema_2($jschema as element(json))
                 }                
         }</definitions>
     return
-        f:_finalizeJschemaRC_2($jschema, $definitions)        
+        f:_finalizeJschemaRC($jschema, $definitions)        
 };
 
 (:~
  : Recursive helper function of '_finalizeSchema'. Models with
  : @___stype are edited - type contents are replaced by type reference
  :)
-declare function f:_finalizeJschemaRC_2($n as node(), $definitions as element(definitions))
+declare function f:_finalizeJschemaRC($n as node(), $definitions as element(definitions))
         as node()? {
     typeswitch($n)        
     case document-node() return
-        document {for $c in $n/node() return f:_finalizeJschemaRC_2($c, $definitions)}
+        document {for $c in $n/node() return f:_finalizeJschemaRC($c, $definitions)}
     case element(json) return   
         element {node-name($n)} {
-            for $a in $n/@* return f:_finalizeJschemaRC_2($a, $definitions),
-            for $c in $n/node() return f:_finalizeJschemaRC_2($c, $definitions),
+            for $a in $n/@* return f:_finalizeJschemaRC($a, $definitions),
+            for $c in $n/node() return f:_finalizeJschemaRC($c, $definitions),
             $definitions
         }
     case element() return
@@ -303,8 +259,8 @@ declare function f:_finalizeJschemaRC_2($n as node(), $definitions as element(de
                 }
         else
             element {node-name($n)} {
-                for $a in $n/@* return f:_finalizeJschemaRC_2($a, $definitions),
-                for $c in $n/node() return f:_finalizeJschemaRC_2($c, $definitions)
+                for $a in $n/@* return f:_finalizeJschemaRC($a, $definitions),
+                for $c in $n/node() return f:_finalizeJschemaRC($c, $definitions)
             }
     default return $n            
 };
@@ -312,10 +268,10 @@ declare function f:_finalizeJschemaRC_2($n as node(), $definitions as element(de
 (:~
  : Recursive helper function of '_xsd2Jschema.
  :)
-declare function f:_xsd2JschemaRC_2($n as node())
+declare function f:_xsd2JschemaRC($n as node())
         as element()* {
-    if ($n/(z:_attributes_ or z:_choice_ or z:_sequence_ or z:_all_ or (* except z:*))) then f:_xsd2JschemaRC_complex_2($n)
-    else f:_xsd2JschemaRC_simple_2($n)
+    if (ap:isLtreeElemComplex($n)) then f:_xsd2JschemaRC_complex($n)
+    else f:_xsd2JschemaRC_simple($n)
 };        
 
 (:~
@@ -327,49 +283,52 @@ declare function f:_xsd2JschemaRC_2($n as node())
  : @param n a location tree node descriptor
  : @return a JSON schema
  :)
-declare function f:_xsd2JschemaRC_complex_2($n as node())
+declare function f:_xsd2JschemaRC_complex($n as node())
         as element()* {
     let $elemName := $n/local-name(.)  
-    let $elemNameJ := f:_xname2Jname_2($elemName)
+    let $elemNameJ := f:_xname2Jname($elemName)
     let $minOccurs := ($n/@minOccurs, '1')[1]
     let $maxOccurs := ($n/@maxOccurs, '1')[1]
     let $typeVariant := $n/@z:typeVariant
     let $itemType := if ($maxOccurs ne '1') then 'array' else 'object'  
     
     let $atts := $n/z:_attributes_/*
-    let $childElems := ap:getLnodeChildElemDescriptors($n)
     
-    (: JSON cannot handle duplicate keys - skip child elems with a repeated name :)
-    let $childElems :=
-        let $names := $childElems/local-name()
-        let $namesD := distinct-values($names)
-        return
-            if (count($names) eq count($namesD)) then $childElems
-            else
-                let $duplicates := 
-                    for $name in $namesD
-                    where count($names[. eq $name]) gt 1
+    (: $childElems - child element descriptors :)
+    let $childElems := 
+        let $raw := ap:getLnodeChildElemDescriptors($n)
+    
+        (: JSON cannot handle duplicate keys - skip child elems with a repeated name :)
+        let $pruned :=
+            let $names := $raw/local-name()
+            let $namesD := distinct-values($names)
+            return
+                if (count($names) eq count($namesD)) then $raw
+                else
+                    let $duplicates := 
+                        for $name in $namesD
+                        where count($names[. eq $name]) gt 1
+                        return
+                            tail($raw[local-name(.) eq $name])
                     return
-                        tail($childElems[local-name(.) eq $name])
-                 return
-                    $childElems except $duplicates
-    
-    let $attSchemas :=
-        for $att in $atts return f:_xsd2Jschema_simpleItem_2($att, ())
-            
-    let $textContentSchema :=
-        if (not($typeVariant eq 'cs')) then () else f:_xsd2Jschema_simpleItem_2($n, xs:NCName('value'))
+                        $raw except $duplicates
+        return $pruned
         
+    (: schemas for attributes :)
+    let $attSchemas :=
+        for $att in $atts return f:_xsd2Jschema_simpleItem($att, ())
+            
+    (: schema for text content (if 'complex type with simple content') :)
+    let $textContentSchema :=
+        if (not($typeVariant eq 'cs')) then () else f:_xsd2Jschema_simpleItem($n, xs:NCName('value'))
+        
+    (: schemas for element children :)        
     let $elemSchemas :=
-        for $c in $childElems
-        let $isComplex := 
-            $c/(z:_attributes_, z:_choice_, z:_sequence_, z:_all_) 
-                or $c/(* except z:*)   (: TODO - INSPECTOR FUNCTION :)
-        return
-            if ($isComplex) then f:_xsd2JschemaRC_complex_2($c)
-            else f:_xsd2Jschema_simpleItem_2($c, ())
+        for $c in $childElems return
+            if (ap:isLtreeElemComplex($c)) then f:_xsd2JschemaRC_complex($c)
+            else f:_xsd2Jschema_simpleItem($c, ())
 
-    let $childSequence := $n/*[not(self::z:*) or self::z:_choice_ or self::z:_sequence_ or self::z:_all_]
+    let $childSequence := $n/((* except z:*), z:_choice_, z:_sequence_, z:_all_)
     let $childSeqDesc := 
         if (empty($childSequence)) then () else
             f:_sequenceDescriptor($childSequence)           
@@ -505,14 +464,14 @@ declare function f:_xsd2JschemaRC_complex_2($n as node())
  :   name; default name is the name of the supplied attribute or element
  : @return a JSON schema describing the item
  :)
-declare function f:_xsd2Jschema_simpleItem_2($item as element(), 
-                                             $propName as xs:NCName?)
+declare function f:_xsd2Jschema_simpleItem($item as element(), 
+                                           $propName as xs:NCName?)
         as element() {
     let $usePropName :=
         if ($propName) then $propName 
         else if ($item/self::z:_attribute_) then $item/@name 
         else $item/local-name(.)
-    let $usePropName := f:_xname2Jname_2($usePropName) ! xs:NCName(.)
+    let $usePropName := f:_xname2Jname($usePropName) ! xs:NCName(.)
     let $maxOccurs := ($item/@maxOccurs, '1')[1]
     let $minOccurs := ($item/@minOccurs, '1')[1]    
     
@@ -525,7 +484,7 @@ declare function f:_xsd2Jschema_simpleItem_2($item as element(),
         if (empty(($typeInfo, $typeName))) then  element {$usePropName} {attribute type {'object'}}
         (: a type is specified :)             
         else 
-            let $component := f:_xsd2Jschema_simpleTypeOrTypeMember_2($usePropName, $typeInfo, $typeName)
+            let $component := f:_xsd2Jschema_simpleTypeOrTypeMember($usePropName, $typeInfo, $typeName)
             return
                 if (not($typeName) or $typeName eq 'z:_LOCAL_' or 0) then $component
                 else
@@ -566,16 +525,16 @@ declare function f:_xsd2Jschema_simpleItem_2($item as element(),
  : @return an xjson element representing a name value pair whose value is
  :    a JSON schema
  :)
-declare function f:_xsd2Jschema_simpleTypeOrTypeMember_2($propName as xs:NCName, 
+declare function f:_xsd2Jschema_simpleTypeOrTypeMember($propName as xs:NCName, 
                                                        $typeInfo as element()?, 
                                                        $typeName as xs:string?)
         as element() {
     if ($typeInfo/z:_list_) then 
-        f:_xsd2Jschema_simpleType_list_2($propName, $typeInfo)
+        f:_xsd2Jschema_simpleType_list($propName, $typeInfo)
     else if ($typeInfo/z:_union_) then 
-        f:_xsd2Jschema_simpleType_union_2($propName, $typeInfo)           
+        f:_xsd2Jschema_simpleType_union($propName, $typeInfo)           
     else 
-        f:_xsd2Jschema_simpleType_atom_2($propName, $typeInfo, $typeName)
+        f:_xsd2Jschema_simpleType_atom($propName, $typeInfo, $typeName)
 };
 
 (:~
@@ -592,13 +551,13 @@ declare function f:_xsd2Jschema_simpleTypeOrTypeMember_2($propName as xs:NCName,
  : @return an xjson element representing a name value pair whose value is
  :    a JSON schema
  :)
-declare function f:_xsd2Jschema_simpleType_atom_2($propName as xs:NCName, 
+declare function f:_xsd2Jschema_simpleType_atom($propName as xs:NCName, 
                                                 $typeInfo as element()?, 
                                                 $typeName as xs:string?)
         as element() {
     let $baseType := 
         if ($typeInfo) then $typeInfo/z:_builtinType_/@z:name else replace($typeName, '.+:', '')    
-    let $typeAndConstraints :=  f:_getTypeAndConstraints_atomicItem_2($typeInfo, $baseType)    
+    let $typeAndConstraints :=  f:_getTypeAndConstraints_atomicItem($typeInfo, $baseType)    
     let $jsonModel :=
         element {$propName} {           
             attribute type {'object'},
@@ -620,18 +579,18 @@ declare function f:_xsd2Jschema_simpleType_atom_2($propName as xs:NCName,
  : @return an xjson element representing a name value pair whose value is
  :    a JSON schema
  :)
-declare function f:_xsd2Jschema_simpleType_list_2($propName as xs:NCName, 
+declare function f:_xsd2Jschema_simpleType_list($propName as xs:NCName, 
                                                 $typeInfo as element())
         as element() {            
     let $baseType := $typeInfo/z:_list_/z:_builtinType_/@z:name
     let $unionType := $typeInfo/z:_list_/z:_union_
     let $itemTypeAndConstraints :=  
-        if ($baseType) then f:_getTypeAndConstraints_atomicItem_2($typeInfo, $baseType)
+        if ($baseType) then f:_getTypeAndConstraints_atomicItem($typeInfo, $baseType)
             (: union: no self-contained property => use the child elem :)        
-        else if ($unionType) then f:_xsd2Jschema_simpleType_union_2(xs:NCName('DUMMY'), $typeInfo)/*            
+        else if ($unionType) then f:_xsd2Jschema_simpleType_union(xs:NCName('DUMMY'), $typeInfo)/*            
         else error(QName((), 'DATA_ERROR'), 'Unexpected type descriptor - list items must be atomic or union')
         
-    let $listConstraints :=  f:_getListConstraints_2($typeInfo)    
+    let $listConstraints :=  f:_getListConstraints($typeInfo)    
     let $jsonModel :=
         element {$propName} {
             attribute type {'object'},
@@ -656,7 +615,7 @@ declare function f:_xsd2Jschema_simpleType_list_2($propName as xs:NCName,
  : @return an xjson element representing a name value pair whose value is
  :    a JSON schema
  :)
-declare function f:_xsd2Jschema_simpleType_union_2($propName as xs:NCName, 
+declare function f:_xsd2Jschema_simpleType_union($propName as xs:NCName, 
                                                  $typeInfo as element())
         as element() {
     element {$propName} {
@@ -664,7 +623,7 @@ declare function f:_xsd2Jschema_simpleType_union_2($propName as xs:NCName,
         <anyOf type="array">{
             for $member in $typeInfo/descendant::z:_union_[1]/z:_member_
             return
-                f:_xsd2Jschema_simpleTypeOrTypeMember_2(xs:NCName('_'), $member, ())
+                f:_xsd2Jschema_simpleTypeOrTypeMember(xs:NCName('_'), $member, ())
         }</anyOf>
     }
 };        
@@ -676,12 +635,12 @@ declare function f:_xsd2Jschema_simpleType_union_2($propName as xs:NCName,
  : @param name an XML name
  : @return the name used in the XML representation of JSON
  :)
-declare function f:_xname2Jname_2($name as xs:string)
+declare function f:_xname2Jname($name as xs:string)
         as xs:string {
     replace($name, '_', '__')        
 };
 
-declare function f:_xsdPattern2JsonPattern_2($pattern as xs:string) {
+declare function f:_xsdPattern2JsonPattern($pattern as xs:string) {
     let $p := $pattern
     let $p := 
         if (contains($p, '|')) then concat('^(', $pattern, ')$')
@@ -702,7 +661,7 @@ declare function f:_xsdPattern2JsonPattern_2($pattern as xs:string) {
  : @param typeName the name of the built-in type
  : @return the content of the JSON model, consisting of a type element and optional contraint elements
  :)
-declare function f:_getTypeAndConstraints_atomicItem_2($typeInfo as element()?, $typeName as xs:string)
+declare function f:_getTypeAndConstraints_atomicItem($typeInfo as element()?, $typeName as xs:string)
         as element()* {
     let $restrictions :=
         if ($typeInfo/z:_list_) then $typeInfo/z:_list_/z:_restriction_
@@ -874,7 +833,7 @@ declare function f:_getTypeAndConstraints_atomicItem_2($typeInfo as element()?, 
  : @param baseTypeName the name of the built-in base type
  : @return the content of the JSON model, consisting of a type element and optional contraint elements
  :)
-declare function f:_getListConstraints_2($typeDescriptor as element())
+declare function f:_getListConstraints($typeDescriptor as element())
         as element()* {
     let $restrictions := $typeDescriptor/z:_restriction_
     
@@ -916,7 +875,7 @@ declare function f:_getListConstraints_2($typeDescriptor as element())
         ($constraintLength, $constraintMinLength, $constraintMaxLength)    
 };        
 
-declare function f:_xsd2JschemaRC_simple_2($n as node())
+declare function f:_xsd2JschemaRC_simple($n as node())
         as element()* {
     ()
 };    
@@ -930,7 +889,7 @@ declare function f:_xsd2JschemaRC_simple_2($n as node())
  :    descriptors
  : @return the sequence descriptor 
  :)
-declare function f:_sequenceDescriptor_2($items as element()*)
+declare function f:_sequenceDescriptor($items as element()*)
         as element() {
     let $parentName := $items[1]/parent::*/local-name(.)
     

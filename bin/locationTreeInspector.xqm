@@ -25,7 +25,6 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     
 declare namespace c="http://www.xsdplus.org/ns/xquery-functions";    
 declare namespace z="http://www.xsdplus.org/ns/structure";
-declare namespace zz="http://www.xsdr.org/ns/structure";
 declare namespace ns0="http://www.xsdr.org/ns/structure";
 
 (:
@@ -190,6 +189,19 @@ declare function f:getLcontentTopLevelChoiceDescriptors($lcontent as element()*)
         $choices,
         f:getLcontentTopLevelChoiceDescriptors($otherGroups/*)
     )
+};
+
+(:~
+ : Returns true if a location tree element descriptor refers to a complex element,
+ : not a simple element.
+ :
+ : @param elem element descriptor
+ : @return true if the descriptor describes a complex element, false otherwise
+ :)
+declare function f:isLtreeElemComplex($elem as element())
+        as xs:boolean {
+    exists(($elem/
+        (z:_attributes_, z:_choice_, z:_sequence_, z:_all_, (* except z:*))))
 };
 
 (:~

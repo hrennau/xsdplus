@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2018-01-12T18:56:21.145+01:00 
+ : @version 2018-01-24T23:14:35.476+01:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -220,18 +220,17 @@ declare variable $toolScheme :=
       <param name="colRhs" type="xs:integer" default="60"/>
       <pgroup name="input" minOccurs="1"/>
     </operation>
-    <operation name="jschema2" type="item()" func="jschema" mod="jsonSchema.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
+    <operation name="jschema" type="item()" func="jschemaOp" mod="jsonSchema.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
       <param name="xsd" type="docFOX*" sep="SC" fct_minDocCount="1" pgroup="xsd"/>
       <param name="ltree" type="docURI*" fct_rootElem="locationTrees" sep="WS" pgroup="xsd"/>
       <param name="ename" type="nameFilter?"/>
       <param name="format" type="xs:string?" fct_values="xml, json" default="json"/>
-      <param name="mode" type="xs:string?" default="rq" fct_values="rq,rs, ot"/>
+      <param name="mode" type="xs:string?" default="rq" fct_values="rq, rs, ot"/>
       <param name="skipRoot" type="xs:boolean?" default="false"/>
       <param name="top" type="xs:boolean?" default="true"/>
       <pgroup name="xsd" maxOccurs="1"/>
     </operation>
-    <operation name="jschemas2" type="item()" func="jschema" mod="jsonSchema.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
-      <param name="dir" type="xs:string"/>
+    <operation name="jschema_old" type="item()" func="jschema_old" mod="jsonSchema_old.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
       <param name="btree" type="docURI*" fct_rootElem="baseTrees" sep="WS"/>
       <param name="ename" type="nameFilter?"/>
       <param name="format" type="xs:string?" fct_values="xml, json" default="json"/>
@@ -239,15 +238,7 @@ declare variable $toolScheme :=
       <param name="skipRoot" type="xs:boolean?" default="false"/>
       <param name="top" type="xs:boolean?" default="true"/>
     </operation>
-    <operation name="jschema" type="item()" func="jschema_old" mod="jsonSchema_old.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
-      <param name="btree" type="docURI*" fct_rootElem="baseTrees" sep="WS"/>
-      <param name="ename" type="nameFilter?"/>
-      <param name="format" type="xs:string?" fct_values="xml, json" default="json"/>
-      <param name="mode" type="xs:string?" default="rq" fct_values="rq,rs, ot"/>
-      <param name="skipRoot" type="xs:boolean?" default="false"/>
-      <param name="top" type="xs:boolean?" default="true"/>
-    </operation>
-    <operation name="jschemas" type="item()" func="jschemas_old" mod="jsonSchema_old.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
+    <operation name="jschemas_old" type="item()" func="jschemas_old" mod="jsonSchema_old.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
       <param name="dir" type="xs:string"/>
       <param name="btree" type="docURI*" fct_rootElem="baseTrees" sep="WS"/>
       <param name="ename" type="nameFilter?"/>
@@ -662,28 +653,6 @@ declare function m:execOperation_frequencyTree($request as element())
 };
      
 (:~
- : Executes operation 'jschema2'.
- :
- : @param request the request element
- : @return the operation result
- :)
-declare function m:execOperation_jschema2($request as element())
-        as item() {
-    a1:jschema($request)        
-};
-     
-(:~
- : Executes operation 'jschemas2'.
- :
- : @param request the request element
- : @return the operation result
- :)
-declare function m:execOperation_jschemas2($request as element())
-        as item() {
-    a1:jschema($request)        
-};
-     
-(:~
  : Executes operation 'jschema'.
  :
  : @param request the request element
@@ -691,16 +660,27 @@ declare function m:execOperation_jschemas2($request as element())
  :)
 declare function m:execOperation_jschema($request as element())
         as item() {
-    a1:jschema_old($request)        
+    a1:jschemaOp($request)        
 };
      
 (:~
- : Executes operation 'jschemas'.
+ : Executes operation 'jschema_old'.
  :
  : @param request the request element
  : @return the operation result
  :)
-declare function m:execOperation_jschemas($request as element())
+declare function m:execOperation_jschema_old($request as element())
+        as item() {
+    a1:jschema_old($request)        
+};
+     
+(:~
+ : Executes operation 'jschemas_old'.
+ :
+ : @param request the request element
+ : @return the operation result
+ :)
+declare function m:execOperation_jschemas_old($request as element())
         as item() {
     a1:jschemas_old($request)        
 };
@@ -884,10 +864,9 @@ declare function m:execOperation($req as element())
         else if ($opName eq 'group') then m:execOperation_group($req)
         else if ($opName eq 'agroup') then m:execOperation_agroup($req)
         else if ($opName eq 'frequencyTree') then m:execOperation_frequencyTree($req)
-        else if ($opName eq 'jschema2') then m:execOperation_jschema2($req)
-        else if ($opName eq 'jschemas2') then m:execOperation_jschemas2($req)
         else if ($opName eq 'jschema') then m:execOperation_jschema($req)
-        else if ($opName eq 'jschemas') then m:execOperation_jschemas($req)
+        else if ($opName eq 'jschema_old') then m:execOperation_jschema_old($req)
+        else if ($opName eq 'jschemas_old') then m:execOperation_jschemas_old($req)
         else if ($opName eq 'lcomps') then m:execOperation_lcomps($req)
         else if ($opName eq 'ltree') then m:execOperation_ltree($req)
         else if ($opName eq 'exportMocks') then m:execOperation_exportMocks($req)
