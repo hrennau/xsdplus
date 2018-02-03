@@ -9,6 +9,7 @@
 module namespace f="http://www.xsdplus.org/ns/xquery-functions";
 
 declare namespace z="http://www.xsdplus.org/ns/structure";
+declare namespace zz="http://www.ttools.org/structure";
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at 
     "tt/_namespaceTools.xqm";    
@@ -24,7 +25,7 @@ import module namespace tt="http://www.ttools.org/xquery-functions" at
  :)
 declare function f:getPath($from as element(), 
                            $to as node(), 
-                           $nsMap as element(z:nsMap)?)
+                           $nsMap as element(zz:nsMap)?)
       as xs:string {
    string-join(
       $to/ancestor-or-self::node()[. >> $from]/(

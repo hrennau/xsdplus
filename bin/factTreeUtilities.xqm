@@ -20,7 +20,7 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "occUtilities.xqm";
     
 declare namespace z="http://www.xsdplus.org/ns/structure";
-declare namespace zz="http://www.xsdr.org/ns/structure";
+declare namespace zz="http://www.ttools.org/structure";
 declare namespace ns0="http://www.xsdr.org/ns/structure";
 
 (:
@@ -52,7 +52,7 @@ declare function f:mergeOtreeIntoLtree($ltree as element(),
                                        $otreeAttNamesMap as map(xs:QName, item()?),                                       
                                        $options as element(options)?)
         as element() {
-    let $nsmap := $ltree/z:nsMap
+    let $nsmap := $ltree/zz:nsMap
     let $otreePathMap := f:otreePathMap($otree, $nsmap)
     return f:mergeOtreeIntoLtreeRC
         ($ltree, $otreePathMap, $ltreeAttNames, $otreeAttNamesMap, $options)            
@@ -90,7 +90,7 @@ declare function f:mergeOtreeIntoLtreeRC($n as node(),
         }</z:locationTree>
         
     case element(z:_stypeTree_) return ()
-    case element(z:nsMap) return ()
+    case element(zz:nsMap) return ()
     
     case element(z:_sequence_) | element(z:_choice_) | element(z:_all_) return
         element {node-name($n)} {
@@ -144,7 +144,7 @@ declare function f:mergeOtreeIntoLtreeRC($n as node(),
  : @param nsmap normalized bindings of namespace URIs to prefixes
  : @return a map associating observation paths with observation nodes
  :)
-declare function f:otreePathMap($otree as element(), $nsmap as element(z:nsMap))
+declare function f:otreePathMap($otree as element(), $nsmap as element(zz:nsMap))
         as map(xs:string, element()) {
     let $ot := f:normalizeNamespaces($otree, $nsmap) 
     return
@@ -181,7 +181,7 @@ declare function f:otreePathMapRC($n as element(), $otree as element())
  : @param nsmap normalized bindings of namespace URIs to prefixes
  : @return a copy of the node with all node names using normalized prefixes
  :)
-declare function f:normalizeNamespaces($n as node(), $nsmap as element(z:nsMap))
+declare function f:normalizeNamespaces($n as node(), $nsmap as element(zz:nsMap))
         as node()? {
     typeswitch($n)
     case document-node() return

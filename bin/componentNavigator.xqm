@@ -20,6 +20,7 @@ import module namespace tt="http://www.ttools.org/xquery-functions" at
 
 declare namespace xs="http://www.w3.org/2001/XMLSchema";
 declare namespace z="http://www.xsdplus.org/ns/structure";
+declare namespace zz="http://www.ttools.org/structure";
 
 (:
  : =======================================
@@ -802,7 +803,7 @@ declare function f:tfindTypeSubTypeTree($type as element()?, $schemas as element
 
 declare function f:_tfindTypeSubTypeTreeRC($type as element(),
                                            $allTypes as element()*,
-                                           $nsmap as element(z:nsMap)) 
+                                           $nsmap as element(zz:nsMap)) 
         as element()* {        
     if (not($type/@name)) then <z:type name="z:_LOCAL_"/> else
     

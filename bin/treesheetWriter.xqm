@@ -43,6 +43,7 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "occUtilities.xqm";
     
 declare namespace z="http://www.xsdplus.org/ns/structure";
+declare namespace zz="http://www.ttools.org/structure";
 
 declare variable $f:TSHEET_INDENT_UNIT := '. ';
 declare variable $f:TSHEET_FILLER_SIMPLE_ITEMS := 
@@ -173,7 +174,7 @@ declare function f:treesheet($enames as element(nameFilter)*,
                              $namespacePrefixLength as xs:integer?,
                              $namespaceLabel as xs:string?,
                              $itemReporter as function(*)*,
-                             $nsmap as element(z:nsMap)?,   
+                             $nsmap as element(zz:nsMap)?,   
                              $schemas as element(xs:schema)+)
         as xs:string {
     let $options :=
@@ -222,7 +223,7 @@ declare function f:ltree2TreesheetRC($n as node(),
         as xs:string* {
     typeswitch($n)
 
-    case element(z:nsMap) | element(z:_stypeTree_) | element(z:_annotation_) return ()
+    case element(zz:nsMap) | element(z:_stypeTree_) | element(z:_annotation_) return ()
 
     case element(z:locationTrees) return 
         for $c in $n/* return
@@ -239,7 +240,7 @@ declare function f:ltree2TreesheetRC($n as node(),
 
         let $lname := replace($n/@z:name, '.+:', '')
         let $nsInfo :=
-            let $nsMap := $n/z:nsMap
+            let $nsMap := $n/zz:nsMap
             return if (not($nsMap)) then () else
             
             let $qname := f:resolveNormalizedQName($n/@z:name, $nsMap)

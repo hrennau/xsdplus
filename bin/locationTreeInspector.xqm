@@ -25,6 +25,7 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     
 declare namespace c="http://www.xsdplus.org/ns/xquery-functions";    
 declare namespace z="http://www.xsdplus.org/ns/structure";
+declare namespace zz="http://www.ttools.org/structure";
 declare namespace ns0="http://www.xsdr.org/ns/structure";
 
 (:
@@ -51,7 +52,7 @@ declare namespace ns0="http://www.xsdr.org/ns/structure";
  :)
 declare function f:getLtreeRoot($ltree as element(z:locationTree))
         as element() {
-    $ltree/(* except z:*)[1]            
+    $ltree/(* except zz:*)[1]            
 };
 
 (:~

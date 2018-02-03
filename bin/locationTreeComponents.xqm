@@ -50,8 +50,9 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "typeInspector.xqm",
     "utilities.xqm";
     
-declare namespace zz="http://www.xsdr.org/ns/structure";
+(: declare namespace zxsdr="http://www.xsdr.org/ns/structure"; :)
 declare namespace z="http://www.xsdplus.org/ns/structure";
+declare namespace zz="http://www.ttools.org/structure";
 declare namespace c="http://www.xsdplus.org/ns/xquery-functions";
 
 declare variable $f:DEBUG external := 'NO_EXPANSIONXXX';
@@ -947,7 +948,7 @@ declare function f:lcomp_typePropertyItems(
  : @param nsmap normalized bindings of namespace URIs to prefixes
  : @return a @z:type attribute providing the normalized type name
  :)
-declare function f:getTypeAtt($elem as element(), $nsmap as element(z:nsMap))
+declare function f:getTypeAtt($elem as element(), $nsmap as element(zz:nsMap))
         as attribute(z:type)? {
     let $att :=        
         $elem/self::xs:element/@type/resolve-QName(., ..) 

@@ -33,7 +33,7 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "occUtilities.xqm";
     
 declare namespace z="http://www.xsdplus.org/ns/structure";
-declare namespace zz="http://www.xsdr.org/ns/structure";
+declare namespace z2="http://www.xsdr.org/ns/structure";
 declare namespace c="http://www.xsdplus.org/ns/xquery-functions";
 
 (:
@@ -87,13 +87,13 @@ declare function f:btree2VtreeRC($n as node(), $options as element(options))
         as node()* {
     typeswitch($n)
     
-    case element(zz:baseTrees) return
+    case element(z2:baseTrees) return
         <z:trees xmlns:z="http://www.xsdplus.org/ns/structure">{
             for $a in $n/@* return f:btree2VtreeRC($a, $options),
             for $c in $n/node() return f:btree2VtreeRC($c, $options)
         }</z:trees>
         
-    case element(zz:baseTree) return
+    case element(z2:baseTree) return
         let $content := (
             for $a in $n/@* return f:btree2VtreeRC($a, $options),
             for $c in $n/node() return f:btree2VtreeRC($c, $options)
@@ -108,15 +108,15 @@ declare function f:btree2VtreeRC($n as node(), $options as element(options))
                 $content
             }</z:tree>
 
-    case element(zz:_sequence_) | element(zz:_choice_) | element(zz:_all_) return
+    case element(z2:_sequence_) | element(z2:_choice_) | element(z2:_all_) return
         element {f:xsdplusName(node-name($n))} {
             for $a in $n/@* return f:btree2VtreeRC($a, $options),
             for $c in $n/node() return f:btree2VtreeRC($c, $options)
         }
 
-    case element(zz:_attributes_) return f:btree2VtreeRC_attributes($n, $options)
+    case element(z2:_attributes_) return f:btree2VtreeRC_attributes($n, $options)
     
-    case element(zz:_attribute_) return
+    case element(z2:_attribute_) return
         element {f:xsdplusName(node-name($n))} {
             for $a in $n/@* return f:btree2VtreeRC($a, $options),
             if ($n/@use eq 'required') then () 
@@ -124,7 +124,7 @@ declare function f:btree2VtreeRC($n as node(), $options as element(options))
             for $c in $n/node() return f:btree2VtreeRC($c, $options)            
         }
 
-    case element(zz:nsMap) return ()
+    case element(z2:nsMap) return ()
     
     case element() return
         let $content := (
@@ -138,11 +138,11 @@ declare function f:btree2VtreeRC($n as node(), $options as element(options))
                 $content except $contentAtts
             }
         
-    case attribute(zz:name) return
-        if ($n/parent::zz:_attribute_) then attribute name {$n}
+    case attribute(z2:name) return
+        if ($n/parent::z2:_attribute_) then attribute name {$n}
         else ()
         
-    case attribute(zz:occ) return attribute occ {$n}        
+    case attribute(z2:occ) return attribute occ {$n}        
     case attribute() return ()    
     case comment() return ()    
     default return $n
@@ -152,15 +152,15 @@ declare function f:btree2VtreeRC($n as node(), $options as element(options))
 (:~
  : Helper function of `btree2VtreeRC`, processing a source node "z:_attributes_".
  :)
-declare function f:btree2VtreeRC_attributes($n as element(zz:_attributes_), $options as element(options))
+declare function f:btree2VtreeRC_attributes($n as element(z2:_attributes_), $options as element(options))
         as node()* {
     let $sourceAtts :=
         if ($options/@attRep eq 'att' or 
                 $options/@attRep eq 'elemSorted') then
-            for $a in $n/zz:_attribute_
-            order by $a/@zz:name/lower-case(replace(., '.*:', '')), $a/@zz:name/lower-case(.)
+            for $a in $n/z2:_attribute_
+            order by $a/@z2:name/lower-case(replace(., '.*:', '')), $a/@z2:name/lower-case(.)
             return $a
-        else $n/zz:_attribute_
+        else $n/z2:_attribute_
     return            
         if ($options/@attRep eq 'att') then
             let $items :=
@@ -170,7 +170,7 @@ declare function f:btree2VtreeRC_attributes($n as element(zz:_attributes_), $opt
                                 else if ($s/@required) then ()
                                 else '?'
                 return
-                    concat($s/@zz:name, $postFix)
+                    concat($s/@z2:name, $postFix)
                 let $itemsConcat := string-join($items, ', ')
                 return
                     attribute atts {$itemsConcat}

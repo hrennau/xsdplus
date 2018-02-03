@@ -28,7 +28,7 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "constants.xqm",
     "utilities.xqm";
     
-declare namespace zz="http://www.xsdr.org/ns/structure";
+declare namespace z2="http://www.xsdr.org/ns/structure";
 declare namespace z="http://www.xsdplus.org/ns/structure";
 
 (:
@@ -51,9 +51,9 @@ declare function f:btreeDependencies($request as element())
     
     let $types :=
         distinct-values(
-            for $bt in $btree//zz:baseTree
-            let $nsMap := $bt/zz:nsMap
-            for $zt in $bt//@zz:type
+            for $bt in $btree//z2:baseTree
+            let $nsMap := $bt/z2:nsMap
+            for $zt in $bt//@z2:type
             let $lname := replace($zt, '.*:', '')
             let $uri := 
                 if (not(contains($zt, ':'))) then () 

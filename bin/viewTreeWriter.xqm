@@ -41,7 +41,8 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "occUtilities.xqm";
     
 declare namespace z="http://www.xsdplus.org/ns/structure";
-declare namespace zz="http://www.xsdr.org/ns/structure";
+declare namespace zz="http://www.ttools.org/structure";
+declare namespace z2="http://www.xsdr.org/ns/structure";
 declare namespace ns0="http://www.xsdr.org/ns/structure";
 
 (:
@@ -94,7 +95,7 @@ declare function f:vtreeOp($request as element())
  :)
 declare function f:ltree2Vtree($ltree as element(), $options as element(options))
         as element() {
-    if ($ltree/self::zz:baseTrees) then app:btree2Vtree($ltree, $options) else
+    if ($ltree/self::z2:baseTrees) then app:btree2Vtree($ltree, $options) else
     
     let $raw := f:ltree2VtreeRC($ltree, $options)
     return
@@ -153,7 +154,7 @@ declare function f:ltree2VtreeRC($n as node(), $options as element(options))
             for $c in $n/node() return f:ltree2VtreeRC($c, $options)
         }
 :)
-    case element(z:nsMap) return ()
+    case element(zz:nsMap) return ()
     
     case element() return
         let $content := (

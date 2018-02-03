@@ -9,6 +9,7 @@
 (: ============================================================================== :)
 module namespace f="http://www.xsdplus.org/ns/xquery-functions";
 declare namespace z="http://www.xsdplus.org/ns/structure";
+declare namespace zz="http://www.ttools.org/structure";
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at 
     "tt/_constants.xqm";
@@ -40,28 +41,29 @@ declare function f:getTargetNamespaces($schemas as element(xs:schema)*)
  : @return a map containing prefix/uri pairs
  :)
 declare function f:getTnsPrefixMap($schemas as element(xs:schema)*)
-      as element(z:nsMap) {
+      as element(zz:nsMap) {
 
    let $tnss := 
       for $t in distinct-values($schemas/@targetNamespace)
       order by lower-case($t) 
       return $t
    return
-      <z:nsMap>{
+      <zz:nsMap>{
          let $prefixTnsPairs := f:_getPrefixTnsPairs($tnss)
          for $pair in $prefixTnsPairs
          let $prefix := substring-before($pair, ':')
          let $tns := substring-after($pair, ':')
          where not($tns eq $tt:URI_XSD)         
          return
-            <z:ns>{
+            <zz:ns>{
                attribute prefix {$prefix},
                attribute uri {$tns}
-            }</z:ns>,
-         <z:ns prefix="xml" uri="http://www.w3.org/XML/1998/namespace"/>,
-         <z:ns prefix="xs" uri="http://www.w3.org/2001/XMLSchema"/>,
-         <z:ns prefix="z" uri="http://www.xsdplus.org/ns/structure"/>
-      }</z:nsMap>
+            }</zz:ns>,
+         <zz:ns prefix="xml" uri="http://www.w3.org/XML/1998/namespace"/>,
+         <zz:ns prefix="xs" uri="http://www.w3.org/2001/XMLSchema"/>,
+         <zz:ns prefix="z" uri="http://www.xsdplus.org/ns/structure"/>,
+         <zz:ns prefix="zz" uri="http://www.ttools.org/structure"/>         
+      }</zz:nsMap>
 };
 
 (:~

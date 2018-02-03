@@ -331,7 +331,7 @@ declare function f:_xsd2JschemaRC_complex($n as node())
     let $childSequence := $n/((* except z:*), z:_choice_, z:_sequence_, z:_all_)
     let $childSeqDesc := 
         if (empty($childSequence)) then () else
-            f:_sequenceDescriptor($childSequence)           
+            trace( f:_sequenceDescriptor($childSequence)  , 'SEQUENCE_DESCRIPTOR: ')           
     let $childSeqDesc := ($childSeqDesc
         , if (not($childSeqDesc)) then () else $f:debugDir ! file:append(concat(., '/log.xml'), serialize($childSeqDesc), $f:debugSerMethodText))       
     let $required :=
@@ -347,10 +347,10 @@ declare function f:_xsd2JschemaRC_complex($n as node())
             (@count eq '0' or @choiceElemsOverlapChoiceElems eq 'true' or @choiceElemsOverlapNonChoiceElems eq 'true')) then ()
         else (        
             for $choice in $childSeqDesc/choices/*
-            let $branches := $choice/branch
+            let $branches := trace( $choice/branch , 'BRANCH: ')
             let $mandatoryBranches := $branches[@mandatoryElems ne '']
             let $optionalBranches := $branches[@mandatoryElems eq '']            
-            return
+            return trace(
                 <oneOf type="array">{
                     (: mandatory branches :)
                     for $branch in $mandatoryBranches
@@ -395,12 +395,12 @@ declare function f:_xsd2JschemaRC_complex($n as node())
                                 }</anyOf>
                             }</not>
                         }</_>                            
-                }</oneOf>       
+                }</oneOf>  , 'ONE_OF: ')       
         )
-    let $choiceEnforcers :=
+    let $choiceEnforcers := trace(
         if (count($choiceEnforcers) le 1) then $choiceEnforcers
         else <allOf type="array">{$choiceEnforcers/<_ type="object">{.}</_>}</allOf>
-            
+            , 'CHOICE_ENFORCERS: ')
     let $properties :=
         <properties type="object">{
             $attSchemas,
@@ -437,7 +437,12 @@ declare function f:_xsd2JschemaRC_complex($n as node())
                         <type>object</type>,
                         (: $occConstraints, :)       (: hjr, 20151222 :)
                         $properties,
-                        <additionalProperties type="boolean">false</additionalProperties>
+                        <additionalProperties type="boolean">false</additionalProperties>,
+                        (: hjr, 20180203 - added the following two contributions:
+                                           $required, $choiceEnforcers :)
+                        $required,
+                        $choiceEnforcers
+
                     }</items>
                 )                
         }       

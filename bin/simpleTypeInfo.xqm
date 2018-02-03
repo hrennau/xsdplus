@@ -47,6 +47,7 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "constants.xqm";
 
 declare namespace z="http://www.xsdplus.org/ns/structure";
+declare namespace zz="http://www.ttools.org/structure";
 declare namespace xs="http://www.w3.org/2001/XMLSchema";
 
 (:
@@ -150,7 +151,7 @@ declare function f:stypeTrees($tnames as element(nameFilter)?,
                               $anames as element(nameFilter)?,                              
                               $global as xs:boolean?,
                               $format as xs:string?,
-                              $nsmap as element(z:nsMap)?,
+                              $nsmap as element(zz:nsMap)?,
                               $schemas as element(xs:schema)+)
         as element()* {
     let $nsmap :=
@@ -245,7 +246,7 @@ declare function f:stypeTrees($tnames as element(nameFilter)?,
  : @return a simple type tree
  :)
 declare function f:stypeTree($component as element()?,
-                             $nsmap as element(z:nsMap)?,                             
+                             $nsmap as element(zz:nsMap)?,                             
                              $schemas as element(xs:schema)+)
         as element(z:_stypeTree_)? {
     let $typeDefOrName :=
@@ -279,7 +280,7 @@ declare function f:stypeTree($component as element()?,
  : @return a simple type tree representing the builtin type name
  :)
 declare function f:stypeTreeForBuiltinType($typeName as xs:QName,
-                                           $nsmap as element(z:nsMap)?,
+                                           $nsmap as element(zz:nsMap)?,
                                            $schemas as element(xs:schema)+)
         as element(z:_stypeTree_)? {
     if (namespace-uri-from-QName($typeName) eq $app:URI_XSD) then   
@@ -298,7 +299,7 @@ declare function f:stypeTreeForBuiltinType($typeName as xs:QName,
  : @return a simple type tree representing the type name
  :)
 declare function f:stypeTreeForTypeName($typeName as xs:QName?,
-                                        $nsmap as element(z:nsMap)?,
+                                        $nsmap as element(zz:nsMap)?,
                                         $schemas as element(xs:schema)+)
         as element(z:_stypeTree_)? {
     if (empty($typeName)) then () else
@@ -325,7 +326,7 @@ declare function f:stypeTreeForTypeName($typeName as xs:QName?,
  :)
 declare function f:stypeTreeForTypeNameOrDef(
                         $typeDefOrName as item(),
-                        $nsmap as element(z:nsMap)?,
+                        $nsmap as element(zz:nsMap)?,
                         $schemas as element(xs:schema)+)
         as element(z:_stypeTree_)? {
         
@@ -352,7 +353,7 @@ declare function f:stypeTreeForTypeNameOrDef(
  :)
 declare function f:stypeInfo($typeDef as element()?,
                              $format as xs:string?,
-                             $nsmap as element(z:nsMap)?,                             
+                             $nsmap as element(zz:nsMap)?,                             
                              $schemas as element(xs:schema)+)
    as item()? {
    let $stypeTree := f:stypeTree($typeDef, $nsmap, $schemas)
@@ -423,7 +424,7 @@ declare function f:stypeTree2StypeDesc($stypeTree as element(),
  : @return a simple type tree representing the builtin type name
  :)
 declare function f:stypeTreeBuiltinTypeStep($typeName as xs:QName,
-                                            $nsmap as element(z:nsMap)?,
+                                            $nsmap as element(zz:nsMap)?,
                                             $schemas as element(xs:schema)+)
         as element(z:_builtinType_)? {
     if (namespace-uri-from-QName($typeName) eq $app:URI_XSD) then   
@@ -441,7 +442,7 @@ declare function f:stypeTreeBuiltinTypeStep($typeName as xs:QName,
  : @return a fraction of a simple type tree
  :)
 declare function f:stypeTreeRC($typeDef as element(), 
-                               $nsmap as element(z:nsMap)?,
+                               $nsmap as element(zz:nsMap)?,
                                $schemas as element(xs:schema)+)
       as element()+ {
     let $extension := 
@@ -622,7 +623,7 @@ declare function f:castToComparable($s as xs:string?)
  : @return attribute(s) conveying the component name
  :) 
 declare function f:stypeTreeNameAtts($typeDef as element(),
-                                     $nsmap as element(z:nsMap)?)
+                                     $nsmap as element(zz:nsMap)?)
         as attribute()+ {
     if ($nsmap) then
         let $nname := app:getNormalizedComponentName($typeDef, $nsmap)
@@ -658,7 +659,7 @@ declare function f:stypeTreeNameAtts($typeDef as element(),
  : @return attribute(s) conveying the component name
  :) 
 declare function f:stypeTreeBuiltinTypeNameAtts($typeName as xs:QName,
-                                                $nsmap as element(z:nsMap)?)
+                                                $nsmap as element(zz:nsMap)?)
         as attribute()+ {
     if ($nsmap) then
         let $nname := app:normalizeQName($typeName, $nsmap)
@@ -679,7 +680,7 @@ declare function f:stypeTreeBuiltinTypeNameAtts($typeName as xs:QName,
  : @return attribute(s) conveying the component name
  :) 
 declare function f:stypeInfoNameAtts($qname as xs:QName,
-                                     $nsmap as element(z:nsMap)?)
+                                     $nsmap as element(zz:nsMap)?)
         as attribute()+ {
     if ($nsmap) then
         let $nname := app:normalizeQName($qname, $nsmap)

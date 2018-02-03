@@ -45,7 +45,7 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     
 declare namespace c="http://www.xsdplus.org/ns/xquery-functions";    
 declare namespace z="http://www.xsdplus.org/ns/structure";
-declare namespace zz="http://www.xsdr.org/ns/structure";
+declare namespace zz="http://www.ttools.org/structure";
 declare namespace ns0="http://www.xsdr.org/ns/structure";
 
 (:
@@ -120,7 +120,7 @@ declare function f:ltree($enames as element(nameFilter)*,
                          $global as xs:boolean?,
                          $options as element(options),
                          $groupNormalization as xs:integer?,
-                         $nsmap as element(z:nsMap),
+                         $nsmap as element(zz:nsMap),
                          $schemas as element(xs:schema)+)
         as element(z:locationTrees) {                         
     
@@ -141,7 +141,7 @@ declare function f:ltree($enames as element(nameFilter)*,
             let $fine := f:finalizeLtree($raw, $groupNormalization)
             let $DUMMY := trace('', 'TREE TIDIED UP ...')            
             return $fine
-        let $root := $ltree/*[not(self::z:nsMap)][1]
+        let $root := $ltree/*[not(self::zz:nsMap)][1]
         order by $root/local-name(.), $root/namespace-uri(.)
         return
             $ltree
@@ -165,7 +165,7 @@ declare function f:ltree($enames as element(nameFilter)*,
 declare function f:lcomps2Ltree($comp as element(),
                                 $sgroups as map(xs:QName, xs:QName+),
                                 $options as element(options),
-                                $nsmap as element(z:nsMap))
+                                $nsmap as element(zz:nsMap))
         as element() {
     let $compKindLabel := local-name($comp) ! replace(., 'lcompsFor', '') ! lower-case(.)
         (: elem | type | group :)
@@ -231,7 +231,7 @@ declare function f:lcomps2LtreeRC($n as node(),
                                   $groupDict as map(*),
                                   $sgroups as map(xs:QName, xs:QName+),
                                   $options as element(options),
-                                  $nsmap as element(z:nsMap),
+                                  $nsmap as element(zz:nsMap),
                                   $visited as element()*)
         as node()* {
     let $DUMMY :=
@@ -582,7 +582,7 @@ declare function f:filterLtreePropertiesRC($n as node(),
             f:filterLtreePropertiesRC($c, $propertiesFilter)}
     case element(z:locationTrees) return
         element {node-name($n)} {
-            for $ns in $n/descendant::z:nsMap[1]/z:ns return
+            for $ns in $n/descendant::zz:nsMap[1]/zz:ns return
                 namespace {$ns/@prefix} {$ns/@uri},
             for $a in $n/@* return f:filterLtreePropertiesRC($a, $propertiesFilter),
             for $c in $n/node() return f:filterLtreePropertiesRC($c, $propertiesFilter)
@@ -595,7 +595,7 @@ declare function f:filterLtreePropertiesRC($n as node(),
         } 
         
     case attribute() return
-        if ($n/ancestor::z:nsMap) then $n
+        if ($n/ancestor::zz:nsMap) then $n
         else if (not(namespace-uri($n) eq $app:URI_LTREE)) then ()
         else if (not(tt:matchesNameFilter(local-name($n), $propertiesFilter))) then ()
         else $n

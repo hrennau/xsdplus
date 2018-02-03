@@ -41,6 +41,7 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "utilities.xqm";    
 
 declare namespace z="http://www.xsdplus.org/ns/structure";
+declare namespace zz="http://www.ttools.org/structure";
 
 declare variable $f:USE_OLD_COMPONENT_LOCATORS as xs:boolean := false();
 
@@ -252,7 +253,7 @@ declare function f:rlocatorsOp($request as element())
  : @return the component locator string
  :)
 declare function f:getComponentLocator($comp as node(),
-                                       $nsmap as element(z:nsMap)?, 
+                                       $nsmap as element(zz:nsMap)?, 
                                        $schemas as element(xs:schema)+)
       as xs:string { 
 (:      
@@ -385,7 +386,7 @@ declare function f:getComponentLocator($comp as node(),
  : @return the component identified by the component locator
  :)
 declare function f:resolveComponentLocator($loc as xs:string,
-                                           $nsmap as element(z:nsMap)?, 
+                                           $nsmap as element(zz:nsMap)?, 
                                            $schemas as element(xs:schema)+)
       as element()? {
     if (matches($loc, '^\i\c*\[')) then 
@@ -413,7 +414,7 @@ declare function f:resolveComponentLocator($loc as xs:string,
  :)
 declare function f:_resolveComponentLocatorRC($context as node()?, 
                                               $path as xs:string,
-                                              $nsmap as element(z:nsMap), 
+                                              $nsmap as element(zz:nsMap), 
                                               $schemas as element(xs:schema)+)
       as element()? {
         (: locator starts with "schema(uri) (note that uri may contain slashes) :)      
@@ -574,7 +575,7 @@ declare function f:_resolveComponentLocatorRC($context as node()?,
  : @param schemas the schemas currently evaluated 
  :)
 declare function f:getComponentLocator_old($comp as node(),
-                                       $nsmap as element(z:nsMap)?, 
+                                       $nsmap as element(zz:nsMap)?, 
                                        $schemas as element(xs:schema)+)
       as xs:string {
     let $nsmap := ($nsmap, app:getTnsPrefixMap($schemas))[1]      
@@ -603,7 +604,7 @@ declare function f:getComponentLocator_old($comp as node(),
  : @return the component identified by the component locator
  :)
 declare function f:resolveComponentLocator_old($loc as xs:string,
-                                           $nsmap as element(z:nsMap)?, 
+                                           $nsmap as element(zz:nsMap)?, 
                                            $schemas as element(xs:schema)+)
       as element()? {
    let $nsmap := ($nsmap, app:getTnsPrefixMap($schemas))[1]      
@@ -636,7 +637,7 @@ declare function f:resolveComponentLocator_old($loc as xs:string,
  :)
 declare function f:_resolveComponentLocatorRC_old($context as node(), 
                                               $path as xs:string,
-                                              $nsmap as element(z:nsMap), 
+                                              $nsmap as element(zz:nsMap), 
                                               $schemas as element(xs:schema)+)
       as element()? {
     let $step := replace($path, '/.*', '')

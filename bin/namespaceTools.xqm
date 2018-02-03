@@ -42,6 +42,7 @@ import module namespace tt="http://www.ttools.org/xquery-functions" at
 declare copy-namespaces preserve, inherit;
 
 declare namespace z="http://www.xsdplus.org/ns/structure";
+declare namespace zz="http://www.ttools.org/structure";
 
 (:~
  : Adds an in-scope namespace to an element, if it does not already have it.
@@ -85,7 +86,7 @@ declare function f:addNSB($e as element()?,
  : @version: 20121202-1
 :)
 declare function f:addNSBs($elem as element()?, 
-                           $nsmap as element(z:nsMap)) 
+                           $nsmap as element(zz:nsMap)) 
       as element()? {
 (: COPY_NAMESPACE_FIX
 
@@ -120,20 +121,20 @@ declare function f:addUsedNSBs($elem as element()?)
       as element()? {
    let $prefixes :=  distinct-values($elem/descendant-or-self::*/in-scope-prefixes(.))
    let $nsmap :=
-      <z:nsMap>{
+      <zz:nsMap>{
          for $prefix in $prefixes[not (. eq 'xml')]
          let $uri := 
             $elem/descendant-or-self::*[in-scope-prefixes(.) = $prefix][1]/
             namespace-uri-for-prefix($prefix, .)
          order by lower-case($prefix)
          return
-            <z:ns prefix="{$prefix}" uri="{$uri}"/>
+            <zz:ns prefix="{$prefix}" uri="{$uri}"/>
          ,
          let $defaultNs := namespace-uri-for-prefix('', $elem)
          return
-            if (string($defaultNs)) then <z:ns prefix="" uri="{$defaultNs}"/>
+            if (string($defaultNs)) then <zz:ns prefix="" uri="{$defaultNs}"/>
             else ()
-      }</z:nsMap>
+      }</zz:nsMap>
    return f:addNSBs($elem, $nsmap)
 };
 
@@ -160,7 +161,7 @@ as node()
 
    case $e as element(xs:schema) return      
       let $usePrefix := f:findPrefix($e, $uri, $prefix, ())
-      let $useNsmap := <z:nsMap><z:ns prefix="{$usePrefix}" uri="{$uri}"/></z:nsMap>
+      let $useNsmap := <zz:nsMap><zz:ns prefix="{$usePrefix}" uri="{$uri}"/></zz:nsMap>
       
       let $changed :=
          <xs:schema>{
@@ -404,11 +405,11 @@ declare function f:copyNSB($source as node()*,
  : @return a map of namespace bindings
  :)
 declare function f:createNsMap($elem as element())
-      as element(z:nsMap) {
-   <z:nsMap>{
+      as element(zz:nsMap) {
+   <zz:nsMap>{
       for $prefix in in-scope-prefixes($elem) return
-         <z:ns prefix="{$prefix}" uri="{namespace-uri-for-prefix($prefix, $elem)}"/>
-   }</z:nsMap>
+         <zz:ns prefix="{$prefix}" uri="{namespace-uri-for-prefix($prefix, $elem)}"/>
+   }</zz:nsMap>
 };
 
 (:~
@@ -418,12 +419,12 @@ declare function f:createNsMap($elem as element())
  : @param defaultNs the new default namespace
  : @return the edited namespace map, containing the required default namespace
  :)
-declare function f:setNsMapDefaultNs($nsmap as element(z:nsMap), $defaultNs as xs:string)
-      as element(z:nsMap) {
-    <z:nsMap>{
-        <z:ns prefix="" uri="{$defaultNs}"/>,
-        $nsmap/z:ns[@prefix/string()]
-    }</z:nsMap>
+declare function f:setNsMapDefaultNs($nsmap as element(zz:nsMap), $defaultNs as xs:string)
+      as element(zz:nsMap) {
+    <zz:nsMap>{
+        <zz:ns prefix="" uri="{$defaultNs}"/>,
+        $nsmap/zz:ns[@prefix/string()]
+    }</zz:nsMap>
 };
 
 
@@ -454,7 +455,7 @@ declare function f:editDataPath($path as xs:string, $noprefix as xs:boolean?)
  :) 
 declare function f:editNormalizedQName($name as xs:string?, 
                                        $noprefix as xs:boolean?,
-                                       $nsmap as element(z:nsMap))
+                                       $nsmap as element(zz:nsMap))
       as xs:string? {
    if (empty($name)) then ()
    else if (not($noprefix)) then $name
@@ -582,7 +583,7 @@ declare function f:namespaceBindings($roots as node()*,
  :)
 declare function f:normalizeQName(
                         $qname as xs:QName, 
-                        $nsmap as element(z:nsMap)?) 
+                        $nsmap as element(zz:nsMap)?) 
         as xs:QName {
         
    if (empty($nsmap)) then $qname
@@ -592,7 +593,7 @@ declare function f:normalizeQName(
       return
          if (empty($uri)) then $qname
          else
-            let $prefix := $nsmap/z:ns[@uri eq $uri]/@prefix
+            let $prefix := $nsmap/zz:ns[@uri eq $uri]/@prefix
             return
                if (empty($prefix)) then $qname else
                   let $lexName := string-join(($prefix, local-name-from-QName($qname)), ':')
@@ -609,7 +610,7 @@ declare function f:normalizeQName(
  :)
 declare function f:normalizedQNameString(
                         $qname as xs:QName, 
-                        $nsmap as element(z:nsMap)?) 
+                        $nsmap as element(zz:nsMap)?) 
         as xs:string {
     string(if (empty($nsmap)) then $qname else f:normalizeQName($qname, $nsmap))
 };
@@ -621,7 +622,7 @@ declare function f:normalizedQNameString(
  : @param name the name string to be resolved
  : @nsmap  a map associating namespace URIs with prefixes
  :)
-declare function f:resolveNormalizedQName($name as xs:string?, $nsmap as element(z:nsMap))
+declare function f:resolveNormalizedQName($name as xs:string?, $nsmap as element(zz:nsMap))
       as xs:QName? {
    if (empty($name)) then () else
    
@@ -646,7 +647,7 @@ declare function f:resolveNormalizedQName($name as xs:string?, $nsmap as element
  : @param nsmap a map associating namespace prefixes with URIs
  : @return a copy of the element with namespace bindings added
 :)
-declare function f:addNSB($elem as element()?, $nsmap as element(z:nsMap)) as element()? {
+declare function f:addNSB($elem as element()?, $nsmap as element(zz:nsMap)) as element()? {
    <z:mp>{
       $nsmap/*[@prefix/string()]/attribute {QName(@uri, concat(@prefix, ':', '_'))} {}, $elem
    }</z:mp>/*
