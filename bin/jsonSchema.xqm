@@ -331,7 +331,7 @@ declare function f:_xsd2JschemaRC_complex($n as node())
     let $childSequence := $n/((* except z:*), z:_choice_, z:_sequence_, z:_all_)
     let $childSeqDesc := 
         if (empty($childSequence)) then () else
-            trace( f:_sequenceDescriptor($childSequence)  , 'SEQUENCE_DESCRIPTOR: ')           
+            f:_sequenceDescriptor($childSequence)           
     let $childSeqDesc := ($childSeqDesc
         , if (not($childSeqDesc)) then () else $f:debugDir ! file:append(concat(., '/log.xml'), serialize($childSeqDesc), $f:debugSerMethodText))       
     let $required :=
@@ -347,10 +347,10 @@ declare function f:_xsd2JschemaRC_complex($n as node())
             (@count eq '0' or @choiceElemsOverlapChoiceElems eq 'true' or @choiceElemsOverlapNonChoiceElems eq 'true')) then ()
         else (        
             for $choice in $childSeqDesc/choices/*
-            let $branches := trace( $choice/branch , 'BRANCH: ')
+            let $branches := $choice/branch
             let $mandatoryBranches := $branches[@mandatoryElems ne '']
             let $optionalBranches := $branches[@mandatoryElems eq '']            
-            return trace(
+            return
                 <oneOf type="array">{
                     (: mandatory branches :)
                     for $branch in $mandatoryBranches
@@ -395,12 +395,11 @@ declare function f:_xsd2JschemaRC_complex($n as node())
                                 }</anyOf>
                             }</not>
                         }</_>                            
-                }</oneOf>  , 'ONE_OF: ')       
+                }</oneOf>       
         )
-    let $choiceEnforcers := trace(
+    let $choiceEnforcers :=
         if (count($choiceEnforcers) le 1) then $choiceEnforcers
         else <allOf type="array">{$choiceEnforcers/<_ type="object">{.}</_>}</allOf>
-            , 'CHOICE_ENFORCERS: ')
     let $properties :=
         <properties type="object">{
             $attSchemas,
