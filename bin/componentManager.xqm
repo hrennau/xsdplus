@@ -64,20 +64,20 @@ declare namespace z="http://www.xsdplus.org/ns/structure";
  :     namespace URI is null.
  :
  : @param comp the schema component
- : @return the component name as a QName
+ : @return the component name as a QName, or an error element
  :)
 declare function f:getComponentName($comp as element())                        
-        as xs:QName {   
+        as item() {   
     if ($comp/@ref) then resolve-QName($comp/@ref, $comp)
     else if ($comp/self::xs:element) then f:getElemComponentName($comp)
     else if ($comp/self::xs:attribute) then f:getAttComponentName($comp)
     else if ($comp/@name) then QName($comp/ancestor::xs:schema/@targetNamespace, $comp/@name)
     else if ($comp/self::xs:complexType or $comp/self::xs:simpleType) then f:getTypeComponentName($comp)   
-    else
+    else trace(
         tt:createError('INVALID_XSD_CONTENT',  
             concat("Schema comp without @name and @ref; ",
                    "type=", local-name($comp), "; ancs=", string-join($comp/ancestor-or-self::*/name(), ', ')),
-            ())
+            ()) , 'ERROR: ')
 };
 
 (:~

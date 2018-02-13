@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2018-01-28T13:37:06.199+01:00 
+ : @version 2018-02-13T22:46:58.038+01:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -31,6 +31,7 @@ import module namespace a1="http://www.xsdplus.org/ns/xquery-functions" at
     "simpleTypeInfo.xqm",
     "substitutionGroups.xqm",
     "treesheetWriter.xqm",
+    "typeGlobalizer.xqm",
     "viewBaseTreeWriter.xqm",
     "viewTreeWriter.xqm";
 
@@ -339,6 +340,12 @@ declare variable $toolScheme :=
       <param name="lang" type="xs:string?"/>
       <pgroup name="in" minOccurs="1"/>
       <pgroup name="comps" maxOccurs="1"/>
+    </operation>
+    <operation name="globalizeTypes" type="element()?" func="globalizeTypesOp" mod="typeGlobalizer.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
+      <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
+      <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
+      <param name="odir" type="directory?" fct_dirExists="true"/>
+      <pgroup name="in" minOccurs="1"/>
     </operation>
     <operation name="valuesTree" type="item()" func="valuesTreeOp" mod="valuesTreeWriter.xqm" namespace="http://www.ttools.org/xitems/ns/xquery-functions">
       <param name="doc" type="docFOX" sep="WS" pgroup="input"/>
@@ -785,6 +792,17 @@ declare function m:execOperation_treesheet($request as element())
 };
      
 (:~
+ : Executes operation 'globalizeTypes'.
+ :
+ : @param request the request element
+ : @return the operation result
+ :)
+declare function m:execOperation_globalizeTypes($request as element())
+        as element()? {
+    a1:globalizeTypesOp($request)        
+};
+     
+(:~
  : Executes operation 'valuesTree'.
  :
  : @param request the request element
@@ -876,6 +894,7 @@ declare function m:execOperation($req as element())
         else if ($opName eq 'stypeDesc') then m:execOperation_stypeDesc($req)
         else if ($opName eq 'sgroups') then m:execOperation_sgroups($req)
         else if ($opName eq 'treesheet') then m:execOperation_treesheet($req)
+        else if ($opName eq 'globalizeTypes') then m:execOperation_globalizeTypes($req)
         else if ($opName eq 'valuesTree') then m:execOperation_valuesTree($req)
         else if ($opName eq 'vbtree') then m:execOperation_vbtree($req)
         else if ($opName eq 'vtree') then m:execOperation_vtree($req)
