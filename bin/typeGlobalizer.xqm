@@ -109,7 +109,7 @@ declare function f:globalizeTypes($odir as xs:string?,
             modify
                 let $ltypes := $schemasContainer_
                                //(xs:simpleType, xs:complexType)
-                               [not((@name, @ref))]
+                               [not(@name)]
                                [../(self::xs:element, self::xs:attribute)]
                 for $ltype in $ltypes
                 let $parent := $ltype/..
@@ -120,23 +120,77 @@ declare function f:globalizeTypes($odir as xs:string?,
 
                 let $ident := $parentUri || ' ~~~ ' || $parentLocalName || ' ~~~ ' || $parentKind
                 group by $ident
+                let $parentUri1 := $parentUri[1]
+                let $parentLocalName1 := $parentLocalName[1]
+                let $parentKind1 := $parentKind[1]
                 for $ltypeInstance at $pos in $ltype
-                let $typeLocalName := $parentLocalName[1] || '___' || $parentKind[1] || 'Type' || '___' || $pos 
+                let $typeLocalName := $parentLocalName1 || '___' || $parentKind1 || 'Type' || '___' || $pos 
                 return (
                     insert node attribute xsdplus:lgtypeName {$typeLocalName} into $ltypeInstance,
-                    insert node attribute xsdplus:lgtypeNamespace {$parentUri} into $ltypeInstance
+                    insert node attribute xsdplus:lgtypeNamespace {$parentUri1} into $ltypeInstance
                 )
             return
                 $schemasContainer_/xs:schema
-                
-    (: To.Do - schemas03 - lgtypeName and lgtypeNamespace for simple types contained by
-                           @restriction, @list, @union child of xs:simpleType;
-                           this requires a function for determining the name, as recursive
-                           calls are necessary if the simple type above @restriction etc.
-                           is itself a local-global type which does not yet have a name.
-                           
+    
+    (: attach @xspdlus:lgtypeName, @xsdplus:lgtypeNamespace to all anonymous types
+       with an xs:union, xs:list or xs:restriction parent :)
+    let $schemas03 :=
+        let $schemasContainer := <schemas>{$schemas02}</schemas>
+        return
+            copy $schemasContainer_ := $schemasContainer     
+            modify
+                let $ltypes := $schemasContainer_//xs:simpleType[not(@name)][not(@xsdplus:lgtypeName)]
+                for $ltype in $ltypes
+                let $ltypeQName := f:getLgtypeNameForStypeInStype($ltype)
+                let $ltypeLocalName := local-name-from-QName($ltypeQName)
+                let $ltypeNamespace := namespace-uri-from-QName($ltypeQName)
+                return (
+                    insert node attribute xsdplus:lgtypeName {$ltypeLocalName} into $ltype,
+                    insert node attribute xsdplus:lgtypeNamespace {$ltypeNamespace} into $ltype
+                )
+            return
+                $schemasContainer_/xs:schema
+    return 
+        f:writeXsds($odir, $schemas03)     
+};
+
+(:~
+ : Determines the pseudo global type name of a simple type locally
+ : defined within a simple type definition (as child of xs:union,
+ : xs:list or xs:restriction).
+ :
+ : @param ltype an anonymous type definition
+ : @return the pseudo global type name
+ :)
+declare function f:getLgtypeNameForStypeInStype($ltype as element())
+        as xs:QName {            
+    let $masterType := $ltype/ancestor::xs:simpleType[1]
+    return if (empty($masterType)) then
+        error(QName((), 'PROGRAM_ERROR'),
+            concat('function must not be called with an xs:simpleType which is ',
+            'not descendant of an xs:simpleType.')) else
+        
+    let $masterTypeName := 
+        if ($masterType/@name) then f:getComponentName($masterType)
+        else if ($masterType/@xsdplus:lgtypeName) then 
+            QName($masterType/@xsdplus:lgtypeNamespace, $masterType/@xsdplus:lgtypeName)
+        else f:getLgtypeNameForStypeInStype($masterType)
+
+    let $role := $ltype/parent::*/local-name(.)   (: union, list, restriction :)
+    let $middlePart :=
+        if ($role eq 'restriction') then 'simpleTypeRestrictionType'
+        else if ($role eq 'list') then 'simpleTypeItemType'
+        else if ($role eq 'union') then 'simpleTypeMemberType'
+        else error()
+    let $suffix :=
+        if ($role eq 'union') then concat('___', count($ltype/preceding-sibling::xs:simpleType) + 1)
+        else ()
+    let $prefix :=
+        let $masterTypeLocalName := local-name-from-QName($masterTypeName)
+        return $masterTypeLocalName
     return
-        f:writeXsds($odir, $schemas02)    
+        QName($ltype/ancestor::xs:schema/@targetNamespace,
+            concat($prefix, '_', $middlePart, $suffix))
 };
 
 (:~
