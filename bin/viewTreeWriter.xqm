@@ -10,6 +10,7 @@
    <operations>   
       <operation name="vtree" type="node()" func="vtreeOp">
          <param name="attRep" type="xs:string?" default="elem" fct_values="att, count, elem, elemSorted"/>      
+         <param name="collapseElems" type="nameFilter?"/>
          <param name="enames" type="nameFilter?" pgroup="comps"/> 
          <param name="tnames" type="nameFilter?" pgroup="comps"/>         
          <param name="gnames" type="nameFilter?" pgroup="comps"/>         
@@ -20,6 +21,7 @@
          <param name="sortAtts" type="xs:boolean?" default="false"/>
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
+         <param name="ltree" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <pgroup name="in" minOccurs="1"/>    
          <pgroup name="comps" maxOccurs="1"/>         
       </operation>
@@ -54,7 +56,7 @@ declare namespace ns0="http://www.xsdr.org/ns/structure";
  :)
 
 (:~
- : Implements operation `vtree`.
+ : Implements operation `vtree`. Creations a view tree.
  :
  : @param request the operation request
  : @return a report containing base tree components describing
@@ -63,24 +65,33 @@ declare namespace ns0="http://www.xsdr.org/ns/structure";
 declare function f:vtreeOp($request as element())
         as element() {
     let $schemas := app:getSchemas($request)
+    let $ltree := tt:getParam($request, 'ltree')/*
     let $enames := tt:getParam($request, 'enames')
     let $tnames := tt:getParam($request, 'tnames')    
     let $gnames := tt:getParam($request, 'gnames')  
     let $global := tt:getParam($request, 'global')    
     let $noprefix := tt:getParam($request, 'noprefix')
     let $nsmap := app:getTnsPrefixMap($schemas)
-    let $groupNorm := trace(tt:getParam($request, 'groupNormalization') , 'GROUP NORMALIZATION: ')
+    let $groupNorm := tt:getParam($request, 'groupNormalization')
     let $sgroupStyle := tt:getParam($request, 'sgroupStyle')    
     let $attRep := tt:getParam($request, 'attRep')    
+    let $collapseElems := tt:getParam($request, 'collapseElems')
     
     let $options :=
         <options withStypeTrees="false" 
                  attRep="{$attRep}" 
                  noprefix="{$noprefix}"
-                 sgroupStyle="{$sgroupStyle}"/>
+                 sgroupStyle="{$sgroupStyle}">{
+            <collapseElems>{
+                $collapseElems
+            }</collapseElems>                 
+        }</options>
     
-    let $ltree := f:ltree($enames, $tnames, $gnames, $global, $options, 
-                          $groupNorm, $nsmap, $schemas)
+    let $ltree := 
+        if ($ltree) then $ltree
+        else
+            f:ltree($enames, $tnames, $gnames, $global, $options, 
+                    $groupNorm, $nsmap, $schemas)
     let $vtree := f:ltree2Vtree($ltree, $options)                          
     return
         $vtree
@@ -123,9 +134,9 @@ declare function f:ltree2VtreeRC($n as node(), $options as element(options))
             for $a in $n/@* return f:ltree2VtreeRC($a, $options),
             for $c in $n/node() return f:ltree2VtreeRC($c, $options)
         )
-        let $nsPrefixes := in-scope-prefixes($content)
+        let $nsPrefixes := in-scope-prefixes($n)
         let $nsNodes :=
-            for $p in $nsPrefixes return namespace {$p} {namespace-uri-for-prefix($p, $content)}
+            for $p in $nsPrefixes return namespace {$p} {namespace-uri-for-prefix($p, $n)}
         return
             <z:tree>{
                 $nsNodes,
@@ -141,29 +152,31 @@ declare function f:ltree2VtreeRC($n as node(), $options as element(options))
         }
 
     case element(z:_attributes_) return f:ltree2VtreeRC_attributes($n, $options)
-(:
-    case element(z:_attribute_) return
-        element {node-name($n)} {
-            for $a in $n/@* return f:ltree2VtreeRC($a, $options),
-            for $c in $n/node() return f:ltree2VtreeRC($c, $options)
-        }
-
-    case element(z:_attribute_) return
-        element {node-name($n)} {
-            for $a in $n/@* return f:ltree2VtreeRC($a, $options),
-            for $c in $n/node() return f:ltree2VtreeRC($c, $options)
-        }
-:)
+    case element(z:_annotation_) return ()
     case element(zz:nsMap) return ()
     
     case element() return
         let $content := (
             for $a in $n/@* return f:ltree2VtreeRC($a, $options),
             if ($n/z:_groupContent_/@z:groupRecursion) then (
-                $n/z:_groupContent_/@z:groupRecursion,
-                $n/z:_groupContent_/@z:occ/attribute groupOcc {.}
+                $n/z:_groupContent_/@z:groupRecursion/attribute __groupRecursion__ {.},
+                $n/z:_groupContent_/@z:occ/attribute __groupOcc__ {.}
+            ) else if ($n/@z:elemRecursion) then (
+                $n/@z:elemRecursion/attribute __elemRecursion__ {name($n)}
             ) else
-                for $c in $n/node() return f:ltree2VtreeRC($c, $options)
+                let $collapse :=
+                    let $collapseElems := $options/collapseElems/*
+                    return
+                        if (not($collapseElems)) then ()
+                        else
+                            let $lname := local-name($n)
+                            return
+                                tt:matchesNameFilter($lname, $collapseElems)
+                return
+                    if ($collapse) then
+                        attribute __collapsed__ {'true'}
+                    else
+                        for $c in $n/node() return f:ltree2VtreeRC($c, $options)
         )
         let $contentAtts := $content[self::attribute()]
         return
