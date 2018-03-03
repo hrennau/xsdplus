@@ -159,10 +159,10 @@ declare function f:ltree2VtreeRC($n as node(), $options as element(options))
         let $content := (
             for $a in $n/@* return f:ltree2VtreeRC($a, $options),
             if ($n/z:_groupContent_/@z:groupRecursion) then (
-                $n/z:_groupContent_/@z:groupRecursion/attribute __groupRecursion__ {.},
-                $n/z:_groupContent_/@z:occ/attribute __groupOcc__ {.}
+                $n/z:_groupContent_/@z:groupRecursion/attribute _groupRecursion_ {.},
+                $n/z:_groupContent_/@z:occ/attribute _groupOcc_ {.}
             ) else if ($n/@z:elemRecursion) then (
-                $n/@z:elemRecursion/attribute __elemRecursion__ {name($n)}
+                $n/@z:elemRecursion/attribute _elemRecursion_ {name($n)}
             ) else
                 let $collapse :=
                     let $collapseElems := $options/collapseElems/*
@@ -174,7 +174,7 @@ declare function f:ltree2VtreeRC($n as node(), $options as element(options))
                                 tt:matchesNameFilter($lname, $collapseElems)
                 return
                     if ($collapse) then
-                        attribute __collapsed__ {'true'}
+                        attribute _collapsed_ {'y'}
                     else
                         for $c in $n/node() return f:ltree2VtreeRC($c, $options)
         )
