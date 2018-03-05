@@ -1,0 +1,4 @@
+<toolSettings toolName="bin">
+  <namespace func="http://www.ttools.org/bin/ns/xquery-functions" error="http://www.ttools.org/bin/ns/error" struct="http://www.ttools.org/bin/ns/structure"/>
+  <flavor>basex81</flavor>
+</toolSettings>
