@@ -28,9 +28,26 @@ declare namespace z="http://www.xsdplus.org/ns/structure";
  :)
 declare function f:getSchemas($request as element())
         as element(xs:schema)* {        
-    let $headSchemas := tt:getParams($request, 'xsd xsds')/*    
+    let $headSchemas := tt:getParams($request, 'xsd xsds')/*
+    let $retainChameleons := (tt:getParam($request, 'retainChameleons'), false())[1]    
     return 
-        if (not($headSchemas)) then () else app:schemaElems($headSchemas)        
+        if (not($headSchemas)) then () else app:schemaElems($headSchemas, $retainChameleons)        
+};
+
+(:~
+ : Retrieves all schemas specified by standard request parameters, or directly or
+ : indirectly included or imported by specified schemas.
+ :
+ : @param request the operation request
+ : @param retainChameleons if true, chameleon schemas are retained as such, rather than 
+ :   transformed into schemas with a target namespace equal to the target namespace
+ :   of the including schema
+ :)
+declare function f:getSchemas($request as element(), $retainChameleons as xs:boolean)
+        as element(xs:schema)* {        
+    let $headSchemas := tt:getParams($request, 'xsd xsds')/*
+    return 
+        if (not($headSchemas)) then () else app:schemaElems($headSchemas, $retainChameleons)        
 };
 
 (:~

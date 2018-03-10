@@ -14,6 +14,12 @@
          <param name="odir" type="directory?" fct_dirExists="true"/>
          <pgroup name="in" minOccurs="1"/>    
       </operation>
+      <operation name="localTypesReport" type="element()?" func="localTypesReportOp">
+         <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
+         <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
+         <param name="skipAnno" type="xs:boolean?" default="true"/>
+         <pgroup name="in" minOccurs="1"/>    
+      </operation>
     </operations>  
 :)  
 
@@ -50,7 +56,7 @@ declare namespace xsdplus="http://www.xsdplus.org/ns/structure";
 
 (:~
  : Implements operation `globalizeTypes`. The operation transforms local types
- : in global types.
+ : into global types.
  :
  : @param request the operation request
  : @return a modified schema, if there is only one schema and parameter
@@ -58,10 +64,29 @@ declare namespace xsdplus="http://www.xsdplus.org/ns/structure";
  :) 
 declare function f:globalizeTypesOp($request as element())
         as element()? {
-    let $schemas := app:getSchemas($request)
+    let $schemas := app:getSchemas($request, true())
+        (: note second arg 'false()' - schema loading does not transform chameleons :)
     let $odir := tt:getParam($request, 'odir')
     return
         f:globalizeTypes($odir, $schemas)
+};     
+
+(:~
+ : Implements operation `localTypeReport`. The operation reports all local types found
+ : in the input schemas and their transitive includes and imports.
+ :
+ : @param request the operation request
+ : @return a report returning all local types associated with a unique name
+ :) 
+declare function f:localTypesReportOp($request as element())
+        as element()? {
+    let $schemas := app:getSchemas($request, true())
+        (: note second arg 'false()' - schema loading does not transform chameleons :)
+    let $skipAnno := tt:getParam($request, 'skipAnno')
+    
+    let $options := <options skipAnno="{$skipAnno}"/>    
+    return
+        f:localTypesReport($schemas, $options)
 };     
 
 (:
@@ -73,8 +98,51 @@ declare function f:globalizeTypesOp($request as element())
  :)
 
 (:~
+ : Creates a local types report. It contains every local type contained in the
+ : input schemas and their transitive includes and imports. Each local type
+ : is associated with a name unique within the corresponding target namespace.
+ :
+ : @param request the operation request
+ : @return a modified schema, if there is only one schema and parameter
+ :    $odir has not been specified, the empty sequence otherwise
+ :) 
+declare function f:localTypesReport($schemas as element(xs:schema)+, $options as element(options)?)
+        as element()? {                         
+    let $skipAnno := trace( $options/@skipAnno/xs:boolean(.) , 'SKIP_ANNO: ')
+    
+    let $lgSchemas := f:schemasWithGlobalizedTypes($schemas)
+    let $lgTypes := $lgSchemas/(xs:simpleType, xs:complexType)[@xsdplus:lgtypeName]
+    let $reportEntries :=
+        for $lgType in $lgTypes
+        let $targetName := replace($lgType/@xsdplus:lgtypeName, '___\d+$', '')
+        let $targetNamespace := $lgType/@xsdplus:lgtypeNamespace
+        let $targetIdent := $targetName || '@' || $targetNamespace
+        group by $targetIdent
+        order by $targetIdent
+        return
+            <z:target name="{$targetName[1]}" namespace="{$targetNamespace[1]}" countTypes="{count($lgType)}">{
+                $lgType
+            }</z:target>
+    let $reportEntries :=
+        if (not($skipAnno)) then $reportEntries
+        else
+            copy $reportEntries_ := <_>{$reportEntries}</_>
+            modify delete nodes $reportEntries_//xs:annotation
+            return $reportEntries_/*
+    return 
+        <z:lgTypes countTargets="{count($reportEntries)}" 
+                   countTypes="{count($reportEntries/*)}"
+                   xmlns:xsdplus="http://www.xsdplus.org/ns/structure" 
+                   xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                   >{
+            $reportEntries
+        }</z:lgTypes>
+    
+};
+
+(:~
  : Implements operation `globalizeTypes`. The operation transforms local types
- : in global types.
+ : into global types.
  :
  : @param request the operation request
  : @return a modified schema, if there is only one schema and parameter
@@ -84,12 +152,29 @@ declare function f:globalizeTypes($odir as xs:string?,
                                   $schemas as element(xs:schema)+)
         as element()? {                         
     
+    let $lgSchemas := f:schemasWithGlobalizedTypes($schemas)
+    return 
+        f:writeXsds($odir, $lgSchemas)     
+};
+
+(:~
+ : Returns input schemas with all local types replaced by references to
+ : global types.
+ :
+ : @param schemas the schemas to be transformed
+ : @return the input schemas, if they do not contain local types, or a
+ :    copy of the input schemas in which any local type is replaced by 
+ :    a reference to a global type which is equavalent to the original
+ :    local type
+ :) 
+declare function f:schemasWithGlobalizedTypes($schemas as element(xs:schema)+)
+        as element(xs:schema)+ {                         
+    
     let $ltypes := $schemas//(xs:simpleType, xs:complexType)[not(@name)]
     return
-        if (not($ltypes)) then f:writeXsds($odir, $schemas)
-        else
+        if (not($ltypes)) then $schemas else
       
-    (: take care that each xs:schema has an explicit @xml:base :)
+    (: add to each xs:schema an explicit @xml:base :)
     let $schemas01 :=
         for $schema in $schemas return
             if ($schema/@xml:base) then $schema
@@ -102,7 +187,14 @@ declare function f:globalizeTypes($odir as xs:string?,
                 }
     
     (: attach @xspdlus:lgtypeName, @xsdplus:lgtypeNamespace to all anonymous types
-       with an element or attribute parent :)
+       with an element or attribute parent 
+       
+       example: Let element <Vision> have a local type; the element would be augmented
+          by attributes similar to these (the counter at the end may differ, if there
+          are several such element declarations):
+             xsdplus:lgtypeName="Vision___elementType___1" 
+             xsdplus:lgtypeNamespace="http://www.stratml.net"       
+       :)
     let $schemas02 :=
         let $schemasContainer := <schemas>{$schemas01}</schemas>
         return
@@ -116,7 +208,7 @@ declare function f:globalizeTypes($odir as xs:string?,
                 let $parent := $ltype/..
                 let $parentKind := $parent/local-name()                
                 let $parentName := app:getComponentName($parent)
-                let $parentLocalName := trace(local-name-from-QName($parentName) , 'PARENT_LNAME: ')
+                let $parentLocalName := local-name-from-QName($parentName)
                 let $tns := $ltype/ancestor::xs:schema/@targetNamespace/string()
 
                 let $ident := $tns || ' ~~~ ' || $parentLocalName || ' ~~~ ' || $parentKind
@@ -133,8 +225,15 @@ declare function f:globalizeTypes($odir as xs:string?,
             return
                 $schemasContainer_/xs:schema
     
-    (: attach @xspdlus:lgtypeName, @xsdplus:lgtypeNamespace to all anonymous types
-       with an xs:union, xs:list or xs:restriction parent :)
+    (: attach @xspdlus:lgtypeName, @xsdplus:lgtypeNamespace to all anonymous 
+       types with an xs:union, xs:list or xs:restriction parent 
+       
+       example: Let 'FlightNumberType' a union type with two anonymous
+          member types; these embedded type definitions would be augmented
+          by attributes:       
+             lgtypeName="FlightNumberType_simpleTypeMemberType___1"
+             lgtypeName="FlightNumberType_simpleTypeMemberType___2"
+       :)
     let $schemas03 :=
         let $schemasContainer := <schemas>{$schemas02}</schemas>
         return
@@ -151,13 +250,17 @@ declare function f:globalizeTypes($odir as xs:string?,
                 )
             return
                 $schemasContainer_/xs:schema
-                
+             
+    (: edit schema elements: 
+          (a) append the new global types
+          (b) replace local types by reference of corresponding global type
+     :)
     let $schemas04 :=
         for $schema in $schemas03
         return
             f:addGlobalTypeReferences($schema)
-    return 
-        f:writeXsds($odir, $schemas04)     
+
+    return $schemas04
 };
 
 (:~
@@ -210,13 +313,15 @@ declare function f:addGlobalTypeReferences($xsd as element(xs:schema))
         as element(xs:schema) {
     let $lgTypes := $xsd//(xs:simpleType, xs:complexType)[@xsdplus:lgtypeName]
     
-    (: step #1 - append new global type definition elements mirroring
-     :    the local types contained by this schema :)
+    (: step #1 - append to the schema global type definition elements 
+          which capture the local type definitions contained by this 
+          schema :)
     let $xsdExtended :=
         element {node-name($xsd)} {
             app:copyNamespaces($xsd),
             $xsd/@*,
             $xsd/node(),
+            (: append the new global types ... :)
             for $lgType in $lgTypes
             return
                 element {node-name($lgType)} {
@@ -228,10 +333,8 @@ declare function f:addGlobalTypeReferences($xsd as element(xs:schema))
     (: step #2 - replace local type child elements by an attribute
      :    referencing the corresponding pseudo global type
      :    (@type, @xs:list, @xs:union, as appropriate) :)
-    let $xsdFinalized :=
-        $xsdExtended/f:insertLgtypeReferences(.) 
-    return
-        $xsdFinalized
+    let $xsdFinalized := $xsdExtended/f:insertLgtypeReferences(.) 
+    return $xsdFinalized
 };  
 
 (:~
@@ -327,10 +430,10 @@ declare function f:getTypeRefsForLocalTypesRC($context as element(),
                                               $intermediateMap as map(xs:string, item()*)?)
         as map(*) {                                              
         (: as map(xs:string, item()+) { :)
-    let $DUMMY := trace($localTypes, 'RECEIVE_LOCAL_TYPES: ')
+    (: let $_DEBUG := trace($localTypes, 'RECEIVE_LOCAL_TYPES: ') :)
     let $head := head($localTypes)
     let $tail := tail($localTypes)
-    let $localName := trace( trace($head, 'HEAD: ')/@xsdplus:lgtypeName , 'LOCAL_NAME: ')
+    let $localName := $head/@xsdplus:lgtypeName
     let $namespace := $head/@xsdplus:lgtypeNamespace
     let $newMap := f:getQNameRefForContext($context, $localName, $namespace)
     let $newIntermediateMap :=
@@ -358,7 +461,7 @@ declare function f:getTypeRefsForLocalTypesRC($context as element(),
         
 
 (:~
- : Returns a map providing a lexical QName to be used as a resolvable reference 
+ : Returns a map describing a lexical QName to be used as a resolvable reference 
  : in the context of an element $context. If the required namespace binding is 
  : not among the in-scope namespace bindings of $context, the map contains a
  : second entry whose value is the required namespace node. Map keys are
@@ -408,7 +511,11 @@ declare function f:getNewPrefix($prefixes as xs:string*, $base as xs:string, $su
 (:~
  : Writes a set of schemas into a folder, or returns the schema
  : if no folder has been specified and the number of schemas
- : is greater than 1.
+ : is 1.
+ :
+ : @TO.DO - support the creation of an output folder tree
+ :    mirroring the input folder tree, rather than write
+ :    everything into a single folder
  :
  : @param odir output folder
  : @param schemas the schemas to be written
@@ -422,7 +529,7 @@ declare function f:writeXsds($odir as xs:string?,
         for $schema in $schemas
         let $docuri := $schema/base-uri(.)
         let $fname := replace($docuri, '.+(/|\\)', '')
-        let $qfname := trace( concat($odir, '/', $fname) , 'QFNAME: ')
+        let $qfname := concat($odir, '/', $fname)
         return
             file:write($qfname, $schema)
     else if (count($schemas) eq 1) then $schemas

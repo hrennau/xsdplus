@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2018-03-05T08:09:08.62+01:00 
+ : @version 2018-03-10T16:54:00.021+01:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -291,6 +291,7 @@ declare variable $toolScheme :=
     <operation name="load" type="node()" func="loadOp" mod="schemaLoader.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
       <param name="xsd" type="docFOX*" sep="WS" pgroup="input"/>
       <param name="xsdCat" type="docCAT*" sep="WS" pgroup="input"/>
+      <param name="retainChameleons" type="xs:boolean?" default="false"/>
       <pgroup name="input" minOccurs="1"/>
     </operation>
     <operation name="stypeTree" type="node()" func="opStypeTree" mod="simpleTypeInfo.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
@@ -345,6 +346,12 @@ declare variable $toolScheme :=
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
       <param name="odir" type="directory?" fct_dirExists="true"/>
+      <pgroup name="in" minOccurs="1"/>
+    </operation>
+    <operation name="localTypesReport" type="element()?" func="localTypesReportOp" mod="typeGlobalizer.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
+      <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
+      <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
+      <param name="skipAnno" type="xs:boolean?" default="true"/>
       <pgroup name="in" minOccurs="1"/>
     </operation>
     <operation name="valuesTree" type="item()" func="valuesTreeOp" mod="valuesTreeWriter.xqm" namespace="http://www.ttools.org/xitems/ns/xquery-functions">
@@ -805,6 +812,17 @@ declare function m:execOperation_globalizeTypes($request as element())
 };
      
 (:~
+ : Executes operation 'localTypesReport'.
+ :
+ : @param request the request element
+ : @return the operation result
+ :)
+declare function m:execOperation_localTypesReport($request as element())
+        as element()? {
+    a1:localTypesReportOp($request)        
+};
+     
+(:~
  : Executes operation 'valuesTree'.
  :
  : @param request the request element
@@ -897,6 +915,7 @@ declare function m:execOperation($req as element())
         else if ($opName eq 'sgroups') then m:execOperation_sgroups($req)
         else if ($opName eq 'treesheet') then m:execOperation_treesheet($req)
         else if ($opName eq 'globalizeTypes') then m:execOperation_globalizeTypes($req)
+        else if ($opName eq 'localTypesReport') then m:execOperation_localTypesReport($req)
         else if ($opName eq 'valuesTree') then m:execOperation_valuesTree($req)
         else if ($opName eq 'vbtree') then m:execOperation_vbtree($req)
         else if ($opName eq 'vtree') then m:execOperation_vtree($req)
