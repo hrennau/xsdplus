@@ -35,10 +35,7 @@ import module namespace tt="http://www.ttools.org/xquery-functions" at
     
 import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at 
     "constants.xqm",
-    "locationTreeComponents.xqm",
-    "locationTreeNormalizer.xqm",
-    "occUtilities.xqm",
-    "substitutionGroups.xqm";
+    "util.xqm";
     
 declare namespace c="http://www.xsdplus.org/ns/xquery-functions";    
 declare namespace z="http://www.xsdplus.org/ns/structure";
@@ -180,7 +177,7 @@ declare function f:schemasWithGlobalizedTypes($schemas as element(xs:schema)+)
             if ($schema/@xml:base) then $schema
             else 
                 element {node-name($schema)} {
-                    app:copyNamespaces($schema),
+                    app:namespaceNodes($schema),
                     $schema/@*, 
                     attribute xml:base {$schema/base-uri(.)}, 
                     $schema/node()
@@ -318,7 +315,7 @@ declare function f:addGlobalTypeReferences($xsd as element(xs:schema))
           schema :)
     let $xsdExtended :=
         element {node-name($xsd)} {
-            app:copyNamespaces($xsd),
+            app:namespaceNodes($xsd),
             $xsd/@*,
             $xsd/node(),
             (: append the new global types ... :)
@@ -396,7 +393,7 @@ declare function f:insertLgtypeReferences($n as node())
                     }
             else
                 element {node-name($n)} {
-                    app:copyNamespaces($n),
+                    app:namespaceNodes($n),
                     for $a in $n/@* return f:insertLgtypeReferences($a),
                     for $c in $n/node() return f:insertLgtypeReferences($c)
                 }

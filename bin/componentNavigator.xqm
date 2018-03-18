@@ -12,7 +12,7 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "componentFinder.xqm",
     "targetNamespaceTools.xqm",
     "typeInspector.xqm",
-    "utilities.xqm";    
+    "util.xqm";    
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at 
     "tt/_constants.xqm",

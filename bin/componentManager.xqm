@@ -19,7 +19,7 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "componentNavigator.xqm",
     "constants.xqm",
     "targetNamespaceTools.xqm",
-    "utilities.xqm";    
+    "util.xqm";    
 
 declare namespace z="http://www.xsdplus.org/ns/structure";
 

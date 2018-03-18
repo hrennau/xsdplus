@@ -82,7 +82,7 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "componentNavigator.xqm",
     "componentPath.xqm",
     "schemaLoader.xqm",
-    "utilities.xqm";
+    "util.xqm";
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at 
     "tt/_constants.xqm",

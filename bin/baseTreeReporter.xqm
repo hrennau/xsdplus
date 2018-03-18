@@ -26,7 +26,7 @@ import module namespace tt="http://www.ttools.org/xquery-functions" at
 import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at 
     "componentFinder.xqm",
     "constants.xqm",
-    "utilities.xqm";
+    "util.xqm";
     
 declare namespace z2="http://www.xsdr.org/ns/structure";
 declare namespace z="http://www.xsdplus.org/ns/structure";

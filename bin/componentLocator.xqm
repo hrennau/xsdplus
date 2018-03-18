@@ -38,7 +38,7 @@ import module namespace tt="http://www.ttools.org/xquery-functions" at
 import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at 
     "targetNamespaceTools.xqm",
     "treeNavigator.xqm",
-    "utilities.xqm";    
+    "util.xqm";    
 
 declare namespace z="http://www.xsdplus.org/ns/structure";
 declare namespace zz="http://www.ttools.org/structure";

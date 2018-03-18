@@ -48,7 +48,7 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "simpleTypeInfo.xqm",
     "targetNamespaceTools.xqm",
     "typeInspector.xqm",
-    "utilities.xqm";
+    "util.xqm";
     
 (: declare namespace zxsdr="http://www.xsdr.org/ns/structure"; :)
 declare namespace z="http://www.xsdplus.org/ns/structure";

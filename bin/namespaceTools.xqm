@@ -325,19 +325,6 @@ as node()
 };
 
 (:~
- : Creates namespace nodes capturing the in-scope-namespaces of
- : a given element.
- :
- : @param elem the element
- : @return namespace nodes
- :)
-declare function f:copyNamespaces($elem as element())
-        as node()* {
-    for $prefix in in-scope-prefixes($elem) return
-        namespace {$prefix} {namespace-uri-for-prefix($prefix, $elem)}
-};
-
-(:~
  : Copy namespace bindings from the source node (element or document) to the
  : target node (element or document. If parameter $deepCopy is true, all
  : bindings found within the fragment rooted in $source are copied, else 

@@ -20,7 +20,8 @@
 module namespace f="http://www.xsdplus.org/ns/xquery-functions";
 
 import module namespace i="http://www.xsdplus.org/ns/xquery-functions" at 
-    "namespaceTools.xqm";
+    "namespaceTools.xqm",
+    "util.xqm";
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at 
     "tt/_request.xqm",
@@ -58,6 +59,36 @@ declare function f:loadOp($request as element())
            $schemas
         }</z:schemas>
 };    
+
+(:~
+ : Retrieves all schemas specified by standard request parameters, or directly or
+ : indirectly included or imported by specified schemas.
+ :
+ : @param request the operation request
+ :)
+declare function f:getSchemas($request as element())
+        as element(xs:schema)* {        
+    let $headSchemas := tt:getParams($request, 'xsd xsds')/*
+    let $retainChameleons := (tt:getParam($request, 'retainChameleons'), false())[1]    
+    return 
+        if (not($headSchemas)) then () else f:schemaElems($headSchemas, $retainChameleons)        
+};
+
+(:~
+ : Retrieves all schemas specified by standard request parameters, or directly or
+ : indirectly included or imported by specified schemas.
+ :
+ : @param request the operation request
+ : @param retainChameleons if true, chameleon schemas are retained as such, rather than 
+ :   transformed into schemas with a target namespace equal to the target namespace
+ :   of the including schema
+ :)
+declare function f:getSchemas($request as element(), $retainChameleons as xs:boolean)
+        as element(xs:schema)* {        
+    let $headSchemas := tt:getParams($request, 'xsd xsds')/*
+    return 
+        if (not($headSchemas)) then () else f:schemaElems($headSchemas, $retainChameleons)        
+};
 
 (:~ 
  : <p/> Returns the xs:schema elements recursively imported imported/included by a given  
@@ -143,7 +174,7 @@ declare function f:schemaElems($rootSchemas as element(xs:schema)+,
 };
 
 (:~ 
- : <p/> Private helper function for function "schemaElems". Recurses over the
+ : Private helper function for function "schemaElems". Recurses over the
  : tree of schema elements directly or indirectly imported or included by
  : a root schema. Returns the root schema and representations of those
  : included/imported schema elements. If an included/imported schema
@@ -266,26 +297,4 @@ declare function f:_schemaElems($rootSchemas as element(xs:schema)+,
       return
          ($actChildContribution, $remainingChildrenContribution, $remainingRootSchemasContribution)
 };
-
-(:~
- : Normalizes a URI. Returns it without changes, unless the URI is
- : a file URI. In this case, reduces multiple slashes after 'file:' to
- : a single slash, puts drive letter lower-case and adds drive letter 'c' in
- : case the uri does not contain a drive letter.
- :
- : @param uri the uri to be normalized
- : @return the normalized uri
- :)
-declare function f:normalizeUri($uri as xs:string) {
-    if (not(matches($uri, '^\s*file:'))) then $uri else
-    
-    let $u := replace($uri, 'file:/+', 'file:/')
-    let $driveLetter := replace($u, '^file:/(.):.+', '$1')[not(. eq $u)]
-    return
-        if ($driveLetter) then
-            replace($u, '(file:/).(:.+)', concat('$1', lower-case($driveLetter), '$2'))
-        else
-            replace($u, '^(file:/)(.+)', '$1c:/$2') 
-};
-
 
