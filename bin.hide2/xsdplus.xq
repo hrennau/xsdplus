@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2018-04-24T23:08:07.083+02:00 
+ : @version 2018-03-31T00:02:44.305+02:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -315,7 +315,7 @@ declare variable $toolScheme :=
     </operation>
     <operation name="seat2xq" type="item()*" func="seat2xqOp" mod="seat2xq.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
       <param name="seat" type="docFOX" sep="WS"/>
-      <param name="format" type="xs:string?" fct_values="txt, seatx, xqx, txt2" default="txt2"/>
+      <param name="format" type="xs:string?" fct_values="txt, xml, txt2" default="txt"/>
     </operation>
     <operation name="stypeTree" type="node()" func="opStypeTree" mod="simpleTypeInfo.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
       <param name="enames" type="nameFilter?" pgroup="comps"/>

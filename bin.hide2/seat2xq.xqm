@@ -10,7 +10,7 @@
    <operations>
       <operation name="seat2xq" type="item()*" func="seat2xqOp">     
          <param name="seat" type="docFOX" sep="WS"/>
-         <param name="format" type="xs:string?" fct_values="txt, seatx, xqx, txt2" default="txt2"/>
+         <param name="format" type="xs:string?" fct_values="txt, xml, txt2" default="txt"/>
       </operation>
     </operations>  
 :)  
@@ -29,8 +29,6 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "xqx2xq.xqm",
     "schemaLoader.xqm",
     "seatFunctions.xqm",
-    "seatx.xqm",
-    "seatxqx.xqm",
     "seat2xq_old.xqm";
     
 declare namespace z="http://www.xsdplus.org/ns/structure";
@@ -48,27 +46,23 @@ declare function f:seat2xqOp($request as element())
         as item()* {
     let $schemas := app:getSchemas($request)      
     let $seats as element(z:seats)? := 
-        tt:getParam($request, 'seat')/*/f:prepareSeatsDoc(.)
+        tt:getParam($request, 'seat')[1]/*/f:prepareSeatsDoc(.)
     let $format := tt:getParam($request, 'format')
     let $resources := $seats/z:resources
     let $seat := $seats/descendant::z:seat[1]
     let $xq := 
-        switch($format)
-        case 'txt' return f:seat2xq($seat, $resources, $request)
-        case 'seatx' return f:seatx($seat, $resources, $request)
-        case 'xqx' return f:seatxqx($seat, $resources, $request)
-        case 'txt2' return
-            let $seatx := f:seatx($seat, $resources, $request)
-            return f:seatx2xq($seatx)
-        case 'txt3' return
-            let $xqx := f:seatxqx($seat, $resources, $request)
-            return f:xqx2xq($xqx)
-        default return error()            
+        if ($format eq 'txt') then f:seat2xq($seat, $resources, $request)
+        else 
+            let $xqx := f:seat2xqx($seat, $resources, $request)
+            return
+                if ($format eq 'xml') then $xqx
+                else f:xqx2xq($xqx)
     return $xq
 };
 
 declare function f:prepareSeatsDoc($doc as element())
         as element() {
+    if ($doc/self::z:seats) then trace($doc, 'DOC: ') else    
     f:prepareSeatsDocRC($doc)        
 };        
 
@@ -112,7 +106,6 @@ declare function f:prepareSeatsDocRC($n as node())
     default return $n            
 };        
 
-(:
 (: Maps a SEAT document to an XML representation of the
  : XQuery transformer.
  :)
@@ -142,7 +135,7 @@ declare function f:seat2xqx($seat as element(z:seat),
         f:seat2xqx_functions_valueMap($resources),
         f:seat2xqx_functions($resources),
         
-        <z:set-context expr="*">{
+        <z:set-context ex="*">{
             f:seat2xqxRC($seat, $request)
         }</z:set-context>
     )    
@@ -176,7 +169,7 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
         }</z:sequence>            
 
     (: the choice is represented by <z:choice>
-       every branch is represented by <z:branch> with @expr :)
+       every branch is represented by <z:branch> with @ex :)
     case element(z:_choice_) return
         let $forEachEx :=
             let $attValue := $n/@for-each/string()
@@ -184,7 +177,6 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
                 if (empty($attValue)) then ()
                 else if (normalize-space($attValue) = ('.', '')) then '$c'
                 else if (matches($attValue, '^\s*~')) then replace($attValue, '^\s*~\s*', '')
-                else if (matches($attValue, '^\s*/')) then replace($attValue, '^\s+', '')                
                 else if (matches($attValue, '^\s*\$')) then replace($attValue, '\s+', '')                
                 else concat("$c/", $attValue)
         
@@ -194,11 +186,10 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
             let $condEx :=
                 if (matches($cond, '^[\d/=]')) then $cond
                 else if (matches($cond, '^\s*~')) then replace($cond, '^\s*~\s*', '')
-                else if (matches($cond, '^\s*/')) then replace($cond, '^\s+', '')
                 else if (matches($cond, '^\s*\$')) then replace($cond, '\s+', '')
                 else concat('$c/', $cond)
             return
-                <z:branch expr="{$condEx}">{
+                <z:branch ex="{$condEx}">{
                     f:seat2xqxRC($case, $request)
                 }</z:branch>
         let $choice :=
@@ -207,7 +198,7 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
             }</z:choice>
         return 
             if ($forEachEx) then
-                <z:for-each expr="{$forEachEx}">{
+                <z:for-each ex="{$forEachEx}">{
                     $choice
                 }</z:for-each>
             else
@@ -253,7 +244,6 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
                     let $vvalue := replace($var, '^.+?=\s*', '')            
                     let $vvalue :=
                         if (matches($vvalue, '^\s*~')) then replace($vvalue, '^\s*~\s*', '')
-                        else if (matches($vvalue, '^\s*/')) then replace($vvalue, '^\s+', '')                        
                         else concat('$c/', $vvalue)           
                     return 
                         <z:set-var name="{$vname}" value="{$vvalue}"/>
@@ -266,7 +256,6 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
                 if (empty($attValue)) then ()
                 else if (normalize-space($attValue) = ('.', '')) then '$c'
                 else if (matches($attValue, '^\s*~')) then replace($attValue, '^\s*~\s*', '')
-                else if (matches($attValue, '^\s*/')) then replace($attValue, '^\s+', '')
                 else if (matches($attValue, '^\s*\$')) then replace($attValue, '\s+', '')                
                 else concat("$c/", $attValue)
                 
@@ -277,7 +266,6 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
            return
                if (not($attValue) or normalize-space($attValue) = ('.', '')) then () 
                else if (matches($attValue, '^\s*~')) then replace($attValue, '^\s*~\s*', '')
-               else if (matches($attValue, '^\s*/')) then replace($attValue, '^\s+', '')               
                else if (matches($attValue, '^\s*\$')) then replace($attValue, '\s+', '')
                else concat("$c/", $attValue)
                 
@@ -293,9 +281,8 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
                 return
                     if (not(normalize-space($attValue))) then () 
                     else if (matches($attValue, '^\s*~')) then replace($attValue, '^\s*~\s*', '')
-                    else if (matches($attValue, '^\s*/')) then concat(replace($attValue, '^\s+', ''), '/string()')
                     else if (matches($attValue, '^\s*\$')) then replace($attValue, '\s+', '')
-                    else concat('$c/', $attValue, '/string()')
+                    else concat("$c/", $attValue)
                 
         (: eval @default 
            ------------- :)
@@ -306,9 +293,8 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
                     if (not($attValue)) then () 
                     else if (not(normalize-space($attValue))) then ''                    
                     else if (matches($attValue, '^\s*~')) then replace($attValue, '^\s*~\s*', '')
-                    else if (matches($attValue, '^\s*/')) then concat(replace($attValue, '^\s+', ''), '/string()')                    
                     else if (matches($attValue, '^\s*\$')) then replace($attValue, '\s+', '')
-                    else concat('$c/', $attValue, '/string()')
+                    else concat("$c/", $attValue)
             return
                 $defaultEx ! attribute default {.}
 
@@ -321,9 +307,8 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
                 else if (normalize-space($attValue) = ('', '.')) then '$c/string()'
                 else if (matches($attValue, '^\s*=')) then concat("'", replace($attValue, '^\s*=\s*', ''), "'")
                 else if (matches($attValue, '^\s*~')) then replace($attValue, '^\s*~\s*', '')
-                else if (matches($attValue, '^\s*/')) then concat(replace($attValue, '^\s+', ''), '/string()')
-                else if (matches($attValue, '^\s*\$')) then concat(replace($attValue, '\s+', ''), '/string()')
-                else  concat('$c/', $attValue, '/string()')
+                else if (matches($attValue, '^\s*\$')) then concat(replace($attValue, '\s+', ''), "/string()")
+                else  concat("$c/", $attValue, "/string()")
                 
         (: eval @post 
            ---------- :)
@@ -387,14 +372,14 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
             else if (not($srcEx)) then $conditionalNode
             else
                 <z:set-value>{
-                    attribute expr {$srcEx},
+                    attribute ex {$srcEx},
                     $conditionalNode
                 }</z:set-value>
             
         let $nodeInContext :=
             if (not($ctxtEx)) then $nodeInValueContext
             else
-                <z:set-context expr="{$ctxtEx}">{
+                <z:set-context ex="{$ctxtEx}">{
                     $altEx ! attribute altEx {.},
                     $nodeInValueContext
                 }</z:set-context>
@@ -402,7 +387,7 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
         let $nodeSequence :=
             if (not($forEachEx)) then $nodeInContext
             else
-                <z:for-each expr="{$forEachEx}">{
+                <z:for-each ex="{$forEachEx}">{
                     $nodeInContext
                 }</z:for-each>
 
@@ -426,163 +411,6 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
     default return $n
             
 };
-:)
-
-(:
-(: Maps a SEAT document to an XML representation of the
- : XQuery transformer.
- :)
-declare function f:seat2xqx2($seat as element(z:seat), 
-                             $resources as element(z:resources)?,
-                             $request as element()?)
-      as item()* {
-    let $xqx := f:seat2xqx($seat, $resources, $request)
-    let $xqx2 := f:getXqx2RC($xqx)
-    return $xqx2
-};
-
-(:~
- : Recursive helper function of `getXqx2`.
- :
- : @param n the node to be processed
- : @return the XQuery code represented by this node
- :) 
-declare function f:getXqx2RC($n as node())
-        as item()* {
-    typeswitch($n)        
-    case document-node() return
-        document {
-            for $c in $n/node() return f:getXqx2RC($c)
-        }
-
-    case element(z:sequence) return
-        <z:sequence>{
-            for $a in $n/@* return f:getXqx2RC($a),
-            for $c in $n/node() return f:getXqx2RC($c)
-        }</z:sequence>
-
-    case element(z:choice) return
-        <z:choice>{
-            for $a in $n/@* return f:getXqx2RC($a),
-            for $c in $n/node() return f:getXqx2RC($c)
-        }</z:choice>
-
-    case element(z:branch) return
-        <z:branch>{
-            for $a in $n/@* return f:getXqx2RC($a),
-            for $c in $n/node() return f:getXqx2RC($c)
-        }</z:branch>
-
-    case element(z:set-var-context) return (
-        for $v in $n/z:var-context/z:set-var return 
-            <z:let name="{$v/@name}" expr="{$v/@value}"/>,
-        <z:return>{
-            for $c in $n/(* except z:var-context) return f:getXqx2RC($c)
-        }</z:return>
-    )
-    
-    case element(z:set-context) return (
-        <z:let name="c" expr="{$n/@expr}"/>,
-        <z:return>{
-            for $c in $n/node() return f:getXqx2RC($c)        
-        }</z:return>        
-    )
-    
-    case element(z:set-value) return (
-        <z:let name="v" expr="{$n/@expr}"/>,
-        <z:return>{
-            for $c in $n/node() return f:getXqx2RC($c)
-        }</z:return>
-    )
-    
-    case element(z:if-value) return
-        <z:if cond="empty($v)">{
-            <z:then expr="()"/>,
-            <z:else>{for $c in $n/node() return f:getXqx2RC($c)}</z:else>
-        }</z:if>
-     
-    case element(z:if-context) return
-        <z:if cond="empty($c)">{
-            <z:then expr="()"/>,
-            <z:else>{for $c in $n/node() return f:getXqx2RC($c)}</z:else>
-        }</z:if>
-     
-    case element(z:for-each) return (
-        <z:for expr="{$n/@expr}"/>,
-        <z:return>{
-            for $c in $n/* return f:getXqx2RC($c)
-        }</z:return>
-    )
-
-    case element(z:attributes) return
-        <z:attributes>{
-            for $a in $n/@* return f:getXqx2RC($a),
-            for $c in $n/node() return f:getXqx2RC($c)
-        }</z:attributes>
-
-    case element(z:namespaces) | element(z:function-value-mapper) | element(z:functios) return
-        $n
-        
-    case element() return
-        let $isAttribute := $n/ancestor::z:attributes
-        let $nname := $n/name()
-        let $children := $n/(z:attributes/*, * except z:attributes)
-        let $hasAttributes := exists($n/z:attributes/*)
-        let $src := $n/@src/string()
-        let $post := $n/@post/string()
-        let $default := $n/@default/string()
-        
-        (: $code_scontent - code used to set simple content :)
-        let $expr_scontent :=
-            let $expr :=
-                if ($src) then
-                    if (not($post) and not($default)) then 
-                        attribute expr {$src}
-                    else (
-                        <z:let name="v" expr="{$src}"/>,
-                        $post ! <z:let name="v" expr="{.}"/>,
-                        if (not($default)) then
-                            <z:return expr="$v"/>
-                        else
-                            <z:return>
-                                <z:if cont="exists($v)">{
-                                    <z:then expr="$v"/>,
-                                    <z:else expr="{$default}"/>
-                                }</z:if>
-                            </z:return>
-                    )
-                else if ($n/ancestor::z:set-value) then
-                    let $exprText := if ($post) then $post else '$v'
-                    return 
-                        attribute expr {$exprText}
-                else ()                        
-            return $expr
-                
-        (: $code_ccontent - code used to set complex content :)
-        let $expr_ccontent := 
-            if ($isAttribute) then () 
-            else if (not($children)) then ()
-            else
-                for $c in $n/* return f:getXqx2RC($c)
-                
-        return
-            (: attribute node 
-               -------------- :)
-            if ($isAttribute) then
-                <z:attribute name="{$nname}">{$expr_scontent}</z:attribute>
-                
-            (: element node 
-               ------------ :)
-            else
-                element {node-name($n)} {
-                    $expr_scontent/self::attribute(),
-                    $expr_ccontent,
-                    $expr_scontent/self::*
-                }
-
-    default return $n
-};        
-:)
 
 (:~ 
  : Helper function of `seat2xqx`, writing an XML representation of

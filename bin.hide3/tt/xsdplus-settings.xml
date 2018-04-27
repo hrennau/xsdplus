@@ -1,0 +1,4 @@
+<toolSettings toolName="xsdplus">
+  <namespace func="http://www.xsdplus.org/ns/xquery-functions" error="http://www.xsdplus.org/ns/error" struct="http://www.xsdplus.org/ns/structure"/>
+  <flavor>basex81</flavor>
+</toolSettings>

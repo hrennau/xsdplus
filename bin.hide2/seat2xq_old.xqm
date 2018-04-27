@@ -6,7 +6,7 @@
  : -------------------------------------------------------------------------
  :)
  
-(: ~ @operations
+(:~@operations
    <operations>
       <operation name="seat2xq" type="item()*" func="seat2xqOp">     
          <param name="seat" type="docFOX" sep="WS"/>

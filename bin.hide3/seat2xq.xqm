@@ -10,7 +10,7 @@
    <operations>
       <operation name="seat2xq" type="item()*" func="seat2xqOp">     
          <param name="seat" type="docFOX" sep="WS"/>
-         <param name="format" type="xs:string?" fct_values="txt, seatx, xqx, txt2" default="txt2"/>
+         <param name="format" type="xs:string?" fct_values="txt, xml, xml2, txt2" default="txt2"/>
       </operation>
     </operations>  
 :)  
@@ -30,7 +30,6 @@ import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at
     "schemaLoader.xqm",
     "seatFunctions.xqm",
     "seatx.xqm",
-    "seatxqx.xqm",
     "seat2xq_old.xqm";
     
 declare namespace z="http://www.xsdplus.org/ns/structure";
@@ -55,14 +54,14 @@ declare function f:seat2xqOp($request as element())
     let $xq := 
         switch($format)
         case 'txt' return f:seat2xq($seat, $resources, $request)
-        case 'seatx' return f:seatx($seat, $resources, $request)
-        case 'xqx' return f:seatxqx($seat, $resources, $request)
+        case 'xml' return f:seat2xqx($seat, $resources, $request)
+        case 'xml2' return f:seat2xqx2($seat, $resources, $request)
         case 'txt2' return
-            let $seatx := f:seatx($seat, $resources, $request)
-            return f:seatx2xq($seatx)
-        case 'txt3' return
-            let $xqx := f:seatxqx($seat, $resources, $request)
+            let $xqx := f:seat2xqx($seat, $resources, $request)
             return f:xqx2xq($xqx)
+        case 'txt3' return
+            let $xqx2 := f:seat2xqx2($seat, $resources, $request)
+            return f:xqx2_xq($xqx2)
         default return error()            
     return $xq
 };
@@ -112,7 +111,6 @@ declare function f:prepareSeatsDocRC($n as node())
     default return $n            
 };        
 
-(:
 (: Maps a SEAT document to an XML representation of the
  : XQuery transformer.
  :)
@@ -426,9 +424,7 @@ declare function f:seat2xqxRC($n as node(), $request as element()?)
     default return $n
             
 };
-:)
 
-(:
 (: Maps a SEAT document to an XML representation of the
  : XQuery transformer.
  :)
@@ -582,7 +578,6 @@ declare function f:getXqx2RC($n as node())
 
     default return $n
 };        
-:)
 
 (:~ 
  : Helper function of `seat2xqx`, writing an XML representation of
