@@ -124,6 +124,7 @@ declare function f:schemaElems($rootSchemas as element(xs:schema)+,
     let $uriNorms := for $uri in $uris return f:normalizeUri($uri)
 
     let $elems := f:_schemaElems($rootSchemas, $retainChameleons, $uriNorms, ())[. instance of node()]
+    (: let $DUMMY := trace($elems/root()/document-uri(.) => sort() , 'XSD_ELEM_URIS: ') :)
     let $errors := tt:extractErrors($elems)
     return
         if ($errors) then
@@ -154,7 +155,25 @@ declare function f:schemaElems($rootSchemas as element(xs:schema)+,
       let $attributeNames := $elem/xs:attribute/@name
       let $attributeGroupNames := $elem/xs:attributeGroup/@name
       let $modelGroupNames := $elem/xs:modelGroup/@name
+
+      let $repeatedElems :=         
+         $elems[position() < $pos][string(@targetNamespace) eq $tns]/xs:element/@name[. = $elementNames]
+      
+      let $DUMMY :=
+        if (not($repeatedElems)) then () else
+            trace($repeatedElems/concat(., '   (in: ', $elem/root()/document-uri(.), '   ### also in: ', root()/document-uri(.)), 'REPEATED_ELEMS: ')
       return
+      (: Note (hjr, 20180829):
+         Applying the treesheet operation to immc2 data (everis) revealed the possible issue
+         that filtering the schema elements (removing elements containing a repeated
+         top-level component) may cause dangling references 
+         (e.g. in f:lcomp_type: app:findType returns the empty sequence)
+       :)
+       
+      (:
+        $elem
+       :)
+              
          $elem [empty($elems[position() < $pos]
                             [string(@targetNamespace) eq $tns]
                             [xs:element/@name = $elementNames])]
@@ -167,7 +186,6 @@ declare function f:schemaElems($rootSchemas as element(xs:schema)+,
                [empty($elems[position() < $pos]
                             [string(@targetNamespace) eq $tns]
                             [xs:modelGroupNames/@name = $modelGroupNames])]
-
    return
       ($errors, $elems)
           

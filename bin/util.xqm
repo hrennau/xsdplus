@@ -156,5 +156,17 @@ declare function f:normalizeUri($uri as xs:string) {
             replace($u, '^(file:/)(.+)', '$1c:/$2') 
 };
 
+(:~
+ : Returns a whitespace string producing indentation.
+ :
+ : @param level hierarchical level of the code line to be indented (>= 0)
+ : @return an XQuery query
+ :) 
+declare function f:xq_indent($level as xs:integer)
+      as xs:string {
+   string-join(for $i in 1 to $level return '   ', '')
+};
+
+
 
 

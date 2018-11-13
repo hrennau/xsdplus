@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2018-04-24T23:08:07.083+02:00 
+ : @version 2018-11-13T23:22:50.328+01:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -314,8 +314,11 @@ declare variable $toolScheme :=
       <pgroup name="input" minOccurs="1"/>
     </operation>
     <operation name="seat2xq" type="item()*" func="seat2xqOp" mod="seat2xq.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
-      <param name="seat" type="docFOX" sep="WS"/>
-      <param name="format" type="xs:string?" fct_values="txt, seatx, xqx, txt2" default="txt2"/>
+      <param name="seat" type="docFOX" fct_minDocCount="1" sep="WS"/>
+      <param name="format" type="xs:string?" fct_values="txt, seatx, xqx, txt2, txt3" default="txt2"/>
+    </operation>
+    <operation name="seatFormatUpgrade" type="item()*" func="seatFormatUpgradeOp" mod="seat2xq.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
+      <param name="seat" type="docFOX" fct_minDocCount="1" sep="WS"/>
     </operation>
     <operation name="stypeTree" type="node()" func="opStypeTree" mod="simpleTypeInfo.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
       <param name="enames" type="nameFilter?" pgroup="comps"/>
@@ -802,6 +805,17 @@ declare function m:execOperation_seat2xq($request as element())
 };
      
 (:~
+ : Executes operation 'seatFormatUpgrade'.
+ :
+ : @param request the request element
+ : @return the operation result
+ :)
+declare function m:execOperation_seatFormatUpgrade($request as element())
+        as item()* {
+    a1:seatFormatUpgradeOp($request)        
+};
+     
+(:~
  : Executes operation 'stypeTree'.
  :
  : @param request the request element
@@ -957,6 +971,7 @@ declare function m:execOperation($req as element())
         else if ($opName eq 'saat') then m:execOperation_saat($req)
         else if ($opName eq 'load') then m:execOperation_load($req)
         else if ($opName eq 'seat2xq') then m:execOperation_seat2xq($req)
+        else if ($opName eq 'seatFormatUpgrade') then m:execOperation_seatFormatUpgrade($req)
         else if ($opName eq 'stypeTree') then m:execOperation_stypeTree($req)
         else if ($opName eq 'stypeDesc') then m:execOperation_stypeDesc($req)
         else if ($opName eq 'sgroups') then m:execOperation_sgroups($req)

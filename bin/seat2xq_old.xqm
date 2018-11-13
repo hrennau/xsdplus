@@ -41,7 +41,7 @@ declare namespace zprev="http://www.xsdr.org/ns/structure";
  : @return an XQuery query
  :) 
 declare function f:seat2xq($seat as element(z:seat), 
-                           $resources as element(z:resources)?,
+                           $resources as element(z:prolog)?,
                            $request as element()?)
       as item()* {
     let $params := tokenize($seat/@params, ',\s*')
@@ -82,7 +82,7 @@ declare function f:seat2xq($seat as element(z:seat),
 (:~
  : Writes XQuery code - value mapping functions.
  :) 
-declare function f:seat2xq_functions_valueMap($resources as element(z:resources))
+declare function f:seat2xq_functions_valueMap($resources as element(z:prolog))
         as xs:string {
     let $lines :=        
         for $valueMap in $resources/z:valueMaps/z:valueMap
@@ -104,7 +104,7 @@ declare function f:seat2xq_functions_valueMap($resources as element(z:resources)
 (:~
  : Writes XQuery code - user-defined functions.
  :) 
-declare function f:seat2xq_functions($resources as element(z:resources))
+declare function f:seat2xq_functions($resources as element(z:prolog))
         as xs:string? {      
     $resources/z:xqueryFunctions/string()[matches(., '\S')]
 };
@@ -216,15 +216,15 @@ declare function f:seat2xqRC($n as node(),
             let $att := $n/@for-each
             return if ($att eq '') then '.' else $att
         let $post := $n/@post      
-        let $ifMissing := ($n/@ifMissing, $n/@ifEmpty, $n/@default, $n/@if0)[1]
+        let $ifMissing := ($n/@ifMissing, $n/@ifEmpty, $n/@dflt, $n/@alt)[1]
         let $defaultValue as xs:string? := if (not($src)) then () else $ifMissing[string(.)]/string()
         
         let $ifMissingClause := 
 (:      
           if (not($ifMissing)) then ()
-          else if ($n/@default) then ()
+          else if ($n/@dflt) then ()
 :)
-            if (not($n/@if0 eq '')) then ()
+            if (not($n/@alt eq '')) then ()
             else if ($src) then concat($indent, "if (empty($v)) then () else&#xA;")
             else if ($ctxt) then concat($indent, "if (empty($c)) then () else&#xA;")          
             else ()

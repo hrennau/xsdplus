@@ -221,7 +221,7 @@ declare function f:ltree2VtreeRC_attributes($n as element(z:_attributes_), $opti
                 for $s in $sourceAtts
                 let $postFix := if ($s/@default) then concat('=', $s/@default)
                                 else if ($s/@fixed) then concat('!=', $s/@fixed)
-                                else if ($s/@required) then ()
+                                else if ($s/@use eq 'required') then ()
                                 else '?'
                 return
                     concat($s/@z:name, $postFix)
