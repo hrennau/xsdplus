@@ -559,8 +559,8 @@ declare function f:_xsd2Jschema_simpleType_atom($propName as xs:NCName,
                                                 $typeInfo as element()?, 
                                                 $typeName as xs:string?)
         as element() {
-    let $baseType := 
-        if ($typeInfo) then $typeInfo/z:_builtinType_/@z:name else replace($typeName, '.+:', '')    
+    let $baseType :=
+        if ($typeInfo) then $typeInfo/(z:_builtinType_/@z:name, @z:name)[1] else replace($typeName, '.+:', '')    
     let $typeAndConstraints :=  f:_getTypeAndConstraints_atomicItem($typeInfo, $baseType)    
     let $jsonModel :=
         element {$propName} {           

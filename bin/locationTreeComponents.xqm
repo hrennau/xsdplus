@@ -572,10 +572,13 @@ declare function f:lcomp_type_elemsRC($n as node(),
         f:lcomp_type_anno($n, $options, $nsmap, $schemas)
         
     case element(xs:any) return
-        <z:_any_>{
-            for $a in $n/@* return f:lcomp_type_elemsRC($a, $options, $nsmap, $schemas),
-            for $c in $n/node() return f:lcomp_type_elemsRC($c, $options, $nsmap, $schemas)            
-        }</z:_any_>
+        let $occAtt := app:getOccAtt($n)
+        return
+            <z:_any_>{
+                $occAtt,
+                for $a in $n/@* return f:lcomp_type_elemsRC($a, $options, $nsmap, $schemas),
+                for $c in $n/node() return f:lcomp_type_elemsRC($c, $options, $nsmap, $schemas)            
+            }</z:_any_>
         
     case element(xs:sequence) | element(xs:choice) | element(xs:all) return
         let $elemName := 'z:_' || local-name($n) || '_'

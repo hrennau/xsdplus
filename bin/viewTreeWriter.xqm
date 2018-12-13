@@ -108,7 +108,14 @@ declare function f:ltree2Vtree($ltree as element(), $options as element(options)
         as element() {
     if ($ltree/self::z2:baseTrees) then app:btree2Vtree($ltree, $options) else
     
-    let $raw := f:ltree2VtreeRC($ltree, $options)
+    let $omap :=
+        let $typeRecursions := $ltree//@z:typeRecursion => distinct-values()
+        return trace(
+            map:merge((
+                map{},
+                map:entry('recursiveTypes', $typeRecursions)
+            )) , 'OMAP: ')
+    let $raw := f:ltree2VtreeRC($ltree, $options, $omap)
     return
         let $noprefix := $options/@noprefix/xs:boolean(.)
         return
@@ -119,20 +126,22 @@ declare function f:ltree2Vtree($ltree as element(), $options as element(options)
 (:~
  : Recursive helper function of `ltree2Vtree`.
  :)
-declare function f:ltree2VtreeRC($n as node(), $options as element(options))
+declare function f:ltree2VtreeRC($n as node(), 
+                                 $options as element(options),
+                                 $omap as map(*))
         as node()* {
     typeswitch($n)
     
     case element(z:locationTrees) return
         <z:trees>{
-            for $a in $n/@* return f:ltree2VtreeRC($a, $options),
-            for $c in $n/node() return f:ltree2VtreeRC($c, $options)
+            for $a in $n/@* return f:ltree2VtreeRC($a, $options, $omap),
+            for $c in $n/node() return f:ltree2VtreeRC($c, $options, $omap)
         }</z:trees>
         
     case element(z:locationTree) return
         let $content := (
-            for $a in $n/@* return f:ltree2VtreeRC($a, $options),
-            for $c in $n/node() return f:ltree2VtreeRC($c, $options)
+            for $a in $n/@* return f:ltree2VtreeRC($a, $options, $omap),
+            for $c in $n/node() return f:ltree2VtreeRC($c, $options, $omap)
         )
         let $nsPrefixes := in-scope-prefixes($n)
         let $nsNodes :=
@@ -147,17 +156,18 @@ declare function f:ltree2VtreeRC($n as node(), $options as element(options))
     
     case element(z:_sequence_) | element(z:_choice_) | element(z:_all_) return
         element {node-name($n)} {
-            for $a in $n/@* return f:ltree2VtreeRC($a, $options),
-            for $c in $n/node() return f:ltree2VtreeRC($c, $options)
+            for $a in $n/@* return f:ltree2VtreeRC($a, $options, $omap),
+            for $c in $n/node() return f:ltree2VtreeRC($c, $options, $omap)
         }
 
-    case element(z:_attributes_) return f:ltree2VtreeRC_attributes($n, $options)
+    case element(z:_attributes_) return f:ltree2VtreeRC_attributes($n, $options, $omap)
     case element(z:_annotation_) return ()
     case element(zz:nsMap) return ()
     
     case element() return
+        let $typeAtt := $n/@z:type/f:ltree2VtreeRC(., $options, $omap)
         let $content := (
-            for $a in $n/@* return f:ltree2VtreeRC($a, $options),
+            for $a in $n/(@* except @z:type) return f:ltree2VtreeRC($a, $options, $omap),
             if ($n/z:_groupContent_/@z:groupRecursion) then (
                 $n/z:_groupContent_/@z:groupRecursion/attribute _groupRecursion_ {.},
                 $n/z:_groupContent_/@z:occ/attribute _groupOcc_ {.}
@@ -176,12 +186,13 @@ declare function f:ltree2VtreeRC($n as node(), $options as element(options))
                     if ($collapse) then
                         attribute _collapsed_ {'y'}
                     else
-                        for $c in $n/node() return f:ltree2VtreeRC($c, $options)
+                        for $c in $n/node() return f:ltree2VtreeRC($c, $options, $omap)
         )
         let $contentAtts := $content[self::attribute()]
         return
             element {node-name($n)} {
                 $contentAtts,
+                $typeAtt,
                 $content except $contentAtts
             }
         
@@ -198,6 +209,9 @@ declare function f:ltree2VtreeRC($n as node(), $options as element(options))
     case attribute(z:groupRecursion) return
         attribute groupRecursion {$n}
 
+    case attribute(z:type) return
+        if ($n = $omap?recursiveTypes and not($n/../@z:typeRecursion)) then attribute type {$n} else ()
+        
     case attribute() return ()
     default return $n
 
@@ -206,7 +220,9 @@ declare function f:ltree2VtreeRC($n as node(), $options as element(options))
 (:~
  : Helper function of `ltree2VtreeRC`, processing a source node "z:_attributes_".
  :)
-declare function f:ltree2VtreeRC_attributes($n as element(z:_attributes_), $options as element(options))
+declare function f:ltree2VtreeRC_attributes($n as element(z:_attributes_), 
+                                            $options as element(options),
+                                            $omap as map(*))
         as node()* {
     let $sourceAtts :=
         if ($options/@attRep eq 'att' or 
@@ -232,10 +248,10 @@ declare function f:ltree2VtreeRC_attributes($n as element(z:_attributes_), $opti
             attribute countAtts {count($sourceAtts)} [$sourceAtts]
         else    
             let $content :=
-                for $s in $sourceAtts return f:ltree2VtreeRC($s, $options)
+                for $s in $sourceAtts return f:ltree2VtreeRC($s, $options, $omap)
             return        
                 element {node-name($n)} {
-                    for $a in $n/@* return f:ltree2VtreeRC($a, $options),
+                    for $a in $n/@* return f:ltree2VtreeRC($a, $options, $omap),
                     $content
                 }        
 };        

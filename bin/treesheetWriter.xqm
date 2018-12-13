@@ -265,6 +265,14 @@ declare function f:ltree2TreesheetRC($n as node(),
         for $c in $n/* return
             f:ltree2TreesheetRC($c, $level, $prefix, $options, $itemReporter)
     
+    case element(z:_any_) return
+        let $occ := trace( $n/@z:occ , 'OCC: ')
+        let $occSuffix :=
+            if (matches($occ, '\d')) then concat('{', $occ, '}') else $occ
+        let $useName := '_any_' || $occSuffix    
+        return
+            $prefix || $useName
+            
     case element(z:_choice_) | element(z:_sgroup_) return
         let $occ := $n/@z:occ
         let $sgHeadSuffix := $n/@z:sgHead/concat('[', replace(., '.*:', ''), ']')
