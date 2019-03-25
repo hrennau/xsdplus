@@ -202,7 +202,7 @@ declare function f:directDeps($comp as element(),
                 {not(namespace-uri-from-QName($compName) eq $app:URI_XSD)}
     
     let $types := distinct-values((
-        $comp//(@type, @base, @itemType)/resolve-QName(., ..),            
+        $comp//(@type, @base, @itemType)[string(.)]/resolve-QName(., ..),            
         $comp//@memberTypes
             /(for $t in tokenize(normalize-space(.), ' ') return 
                 resolve-QName($t, ..))))

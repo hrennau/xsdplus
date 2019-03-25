@@ -60,7 +60,7 @@ declare function f:frequencyTreeOp($request as element())
     let $schemas := app:getSchemas($request)        
     let $docs := tt:getParams($request, 'doc dcat')
     let $rootElem := tt:getParams($request, 'rootElem')
-    let $format := tt:getParams($request, 'format')
+    let $format := trace(tt:getParams($request, 'format') , 'FORMAT: ')
     let $colRhs := trace(tt:getParams($request, 'colRhs') , 'COLRHS: ')
     let $sgroupStyle := tt:getParams($request, 'sgroupStyle')
     return
@@ -128,11 +128,22 @@ declare function f:frequencyTree($docs as node()+,
     return
         (: case #1 - no schemas, just return frequency trees :)
         if (not($schemas)) then
-            if (count($freqTrees) eq 1) then $freqTrees
-            else
-                <z:frequencyTrees count="{count($freqTrees)}">{
-                    $freqTrees
-                }</z:frequencyTrees>
+            let $xmlReport :=
+                if (count($freqTrees) eq 1) then $freqTrees
+                else
+                    <z:frequencyTrees count="{count($freqTrees)}">{
+                        $freqTrees
+                    }</z:frequencyTrees>
+                    
+            return
+                if ($format eq 'xml') then $xmlReport                    
+                else                
+                (: format = treesheet :)        
+                    let $options := <options colRhs="{$colRhs}"/>
+                    let $itemReporter := f:treesheetItemReporter_itemFrequency#2
+                    return
+                        app:ltree2Treesheet($xmlReport, $options, $itemReporter)
+                
         else
         
     (: case #2 - with schemas, return fact trees :)
@@ -239,7 +250,7 @@ declare function f:elementNodesObserver_itemFrequency($elems as element()*, $doc
  :)
 declare function f:treesheetItemReporter_itemFrequency($node, $options)
         as xs:string* {
-    if ($node/parent::z:locationTree) then 
+    if ($node/(parent::z:locationTree, parent::z:frequencyTree)) then 
         concat('dcount: ', $node/@z:dcount)
     else if ($node/@z:dfreq) then
         let $dfreq := $node/@z:dfreq

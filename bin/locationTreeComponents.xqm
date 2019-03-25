@@ -357,7 +357,8 @@ declare function f:lcomp_type($typeName as xs:QName,
     let $tname := local-name-from-QName($typeName)
     let $tns := namespace-uri-from-QName($typeName)
     let $normalizedName := app:normalizeQName(QName($tns, $tname), $nsmap)
-    let $type := app:findType($typeName, $schemas)    
+    let $type := app:findType($typeName, $schemas) 
+    let $DUMMY := if ($type) then () else trace($typeName, 'TYPE_NAME CANNOT BE RESOLVED: ')
     let $typeContent := f:lcomp_typeContent($type, $options, $nsmap, $schemas)
     return
         <z:type z:name="{$normalizedName}">{$typeContent}</z:type>

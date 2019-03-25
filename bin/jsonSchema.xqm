@@ -141,8 +141,8 @@ declare function f:jschemaOp($request as element())
                 else ($ltreeRootElems/descendant-or-self::*[tt:matchesNameFilter(local-name(.), $ename)])[1]            
             else    
                 $ltree/descendant::z:locationTree[1]/f:getLtreeRoot(.)
-    return
-        f:getJschema($ltreeRootElem, $skipRoot, $format)
+    let $jschema :=f:getJschema($ltreeRootElem, $skipRoot, $format)
+    return $jschema
 };      
 
 (:
@@ -171,7 +171,7 @@ declare function f:getJschema($ltreeElem as element(),
     let $jsx := f:_xsd2Jschema($ltreeElem, $skipRoot)
     return (
         if ($format eq 'xml') then $jsx
-        else json:serialize($jsx) ! replace(., '\\/', '/')
+        else json:serialize($jsx) ! replace(., '\\/', '/')  ! replace(., '\\i', '\\c')
     )
 };      
 
