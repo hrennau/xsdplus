@@ -11,7 +11,10 @@
       <operation name="deps" type="node()" func="depsOp">
          <param name="enames" type="nameFilter?" pgroup="comps"/> 
          <param name="tnames" type="nameFilter?" pgroup="comps"/>         
-         <param name="gnames" type="nameFilter?" pgroup="comps"/>         
+         <param name="gnames" type="nameFilter?" pgroup="comps"/>    
+         <param name="ens" type="nameFilter?"/>
+         <param name="tns" type="nameFilter?"/>
+         <param name="gns" type="nameFilter?"/>         
          <param name="global" type="xs:boolean?" default="true"/>      
          <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>         
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
@@ -69,6 +72,9 @@ declare function f:depsOp($request as element())
     let $enames := tt:getParams($request, 'enames')
     let $tnames := tt:getParams($request, 'tnames')    
     let $gnames := tt:getParams($request, 'gnames')  
+    let $ens := tt:getParam($request, 'ens')    
+    let $tns := tt:getParam($request, 'tns')
+    let $gns := tt:getParam($request, 'gns')    
     let $global := tt:getParams($request, 'global')
     let $sgroupStyle := tt:getParam($request, 'sgroupStyle')    
     
@@ -76,16 +82,22 @@ declare function f:depsOp($request as element())
         if (empty(($enames, $tnames, $gnames))) then
             $schemas/xs:element[tt:matchesNameFilter(@name, $enames)]
         else (
-            if (not($enames)) then () else (
-                if ($global) then $schemas/xs:element
-                else $schemas/descendant::xs:element
+            if (not($enames)) then () else 
+                let $fschemas := if (not($ens)) then $schemas else $schemas[tt:matchesNameFilter(@targetNamespace, $ens)]
+                return (
+                    if ($global) then $fschemas/xs:element
+                    else $fschemas/descendant::xs:element
                 )[tt:matchesNameFilter(@name, $enames)],
             if (not($tnames)) then () else 
-                $schemas/(descendant::xs:simpleType, descendant::xs:complexType)
-                [tt:matchesNameFilter(@name, $tnames)],
+                let $fschemas := if (not($tns)) then $schemas else $schemas[tt:matchesNameFilter(@targetNamespace, $tns)]
+                return
+                    $fschemas/(descendant::xs:simpleType, descendant::xs:complexType)
+                    [tt:matchesNameFilter(@name, $tnames)],
             if (not($gnames)) then () else 
-                $schemas/descendant::xs:group
-                [tt:matchesNameFilter(@name, $gnames)]
+                let $fschemas := if (not($gns)) then $schemas else $schemas[tt:matchesNameFilter(@targetNamespace, $gns)]
+                return
+                    $fschemas/descendant::xs:group
+                    [tt:matchesNameFilter(@name, $gnames)]
         )                
     let $compKind := 
         switch($comps[1]/local-name())
@@ -209,14 +221,14 @@ declare function f:directDeps($comp as element(),
         [$isUserDefined(.)]                        
     let $groups := distinct-values(
         $comp//xs:group/@ref/resolve-QName(., ..))
-        [$isUserDefined(.)]        
+        (: [$isUserDefined(.)] :)   (: 20190607, hjr: removed the filter excluding components in the XSD namespace :)        
     let $agroups := distinct-values(
         $comp//xs:attributeGroup/@ref/resolve-QName(., ..))
         [$isUserDefined(.)]        
     let $elems := distinct-values((
         $comp/descendant-or-self::xs:element/@ref/resolve-QName(., ..)
-        [$isUserDefined(.)],
-
+        (: [$isUserDefined(.)] :)   (: 20190607, hjr: removed the filter excluding components in the XSD namespace :)
+        ,
         if ($sgroupStyle eq 'ignore') then () else (
         
             (: add substitution groups of which this element is a member :)        

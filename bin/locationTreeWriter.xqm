@@ -11,7 +11,10 @@
       <operation name="ltree" type="node()" func="ltreeOp">
          <param name="enames" type="nameFilter?" pgroup="comps"/> 
          <param name="tnames" type="nameFilter?" pgroup="comps"/>         
-         <param name="gnames" type="nameFilter?" pgroup="comps"/>         
+         <param name="gnames" type="nameFilter?" pgroup="comps"/>   
+         <param name="ens" type="nameFilter?"/>
+         <param name="tns" type="nameFilter?"/>
+         <param name="gns" type="nameFilter?"/>         
          <param name="global" type="xs:boolean?" default="true"/>         
          <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
          <param name="stypeTrees" type="xs:boolean?" default="true"/>         
@@ -69,6 +72,9 @@ declare function f:ltreeOp($request as element())
     let $enames := tt:getParam($request, 'enames')
     let $tnames := tt:getParam($request, 'tnames')    
     let $gnames := tt:getParam($request, 'gnames')  
+    let $ens := tt:getParam($request, 'ens')    
+    let $tns := tt:getParam($request, 'tns')
+    let $gns := tt:getParam($request, 'gns')    
     let $global := tt:getParam($request, 'global')  
     let $withStypeTrees := tt:getParams($request, 'stypeTrees')    
     let $withAnnos := tt:getParams($request, 'annos')    
@@ -82,7 +88,7 @@ declare function f:ltreeOp($request as element())
                  sgroupStyle="{$sgroupStyle}"
                  withAnnos="{$withAnnos}"/>
     
-    let $ltree := f:ltree($enames, $tnames, $gnames, $global, $options, 
+    let $ltree := f:ltree($enames, $tnames, $gnames, $ens, $tns, $gns, $global, $options, 
                           $groupNorm, $nsmap, $schemas)
     let $ltree :=
         if (not($propertyFilter)) then $ltree else 
@@ -114,7 +120,10 @@ declare function f:ltreeOp($request as element())
  :) 
 declare function f:ltree($enames as element(nameFilter)*,
                          $tnames as element(nameFilter)*,    
-                         $gnames as element(nameFilter)*,  
+                         $gnames as element(nameFilter)*,
+                         $ens as element(nameFilter)*,
+                         $tns as element(nameFilter)*,
+                         $gns as element(nameFilter)*,                         
                          $global as xs:boolean?,
                          $options as element(options),
                          $groupNormalization as xs:integer?,
@@ -126,7 +135,7 @@ declare function f:ltree($enames as element(nameFilter)*,
     
     (: select schema components to be translated into location trees :)
     let $comps :=
-        f:lcomps($enames, $tnames, $gnames, $global, $options, 
+        f:lcomps($enames, $tnames, $gnames, $ens, $tns, $gns, $global, $options, 
             true(), true(), $nsmap, $schemas)
         
     let $ltrees :=
@@ -192,7 +201,6 @@ declare function f:lcomps2Ltree($comp as element(),
             for $group in $comp/z:groups/z:group
             return map:entry($group/@z:name, $group)
         )
-        
     let $ltree := f:lcomps2LtreeRC(
         $comp, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, ())
     return
@@ -302,9 +310,9 @@ declare function f:lcomps2LtreeRC($n as node(),
 
     (: element represents a group reference :)
     (: note - group references within type contents have not yet been resolved :)
-    case element(z:_group_) return    
+    case element(z:_group_) return
         let $groupDef := map:get($groupDict, $n/@ref)  (: TO.DO - normalize name ? :)
-        return if (empty($groupDef)) then error() else
+        return if (empty($groupDef)) then error(QName((), 'XSD_INVALID'), concat('Cannot resolve group reference: ', $n/@ref)) else
             
         let $groupContent := f:lcomps2LtreeRC(
             $groupDef, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, $visited)        
@@ -486,15 +494,16 @@ declare function f:lcomps2LtreeRC($n as node(),
  : For debugging purposes - logs recursion paths.
  :)
 declare function f:_debug_reportRecursion($label as xs:string, $visited as element()*)
-        as empty-sequence() {      
-    let $steps := $visited[empty((self::z:group, self::z:type))]/@z:name      
+        as empty-sequence() {
+    let $file := $app:_DEBUGFILE_RECURSION_PATHS
+    return if (not($file)) then () else
     
+    let $steps := $visited[empty((self::z:group, self::z:type))]/@z:name    
     let $elemPath := string-join($steps, '/')
     let $compPath := string-join(
         $visited ! @z:name/concat(., parent::z:group/'(group)', parent::z:type/'(type)')
         , '/')
-    
-    let $file := $app:_DEBUGFILE_RECURSION_PATHS
+   
     return (
         file:append($file, concat($label, ' [#ELEM-STEPS=', count($steps), '] ', $elemPath, '&#xA;')),
         file:append($file, concat($label, ' [#COMP-STEPS=', count($visited), '] ', $compPath, '&#xA;'))        

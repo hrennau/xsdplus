@@ -11,7 +11,10 @@
       <operation name="lcomps" type="node()" func="lcompsOp">
          <param name="enames" type="nameFilter?" pgroup="comps"/> 
          <param name="tnames" type="nameFilter?" pgroup="comps"/>         
-         <param name="gnames" type="nameFilter?" pgroup="comps"/>         
+         <param name="gnames" type="nameFilter?" pgroup="comps"/>    
+         <param name="ens" type="nameFilter?"/>
+         <param name="tns" type="nameFilter?"/>
+         <param name="gns" type="nameFilter?"/>         
          <param name="global" type="xs:boolean?" default="true"/>        
          <param name="expandBaseType" type="xs:boolean?" default="true"/>
          <param name="expandGroups" type="xs:boolean?" default="true"/>         
@@ -78,6 +81,9 @@ declare function f:lcompsOp($request as element())
     let $enames := tt:getParams($request, 'enames')
     let $tnames := tt:getParams($request, 'tnames')    
     let $gnames := tt:getParams($request, 'gnames')  
+    let $ens := tt:getParam($request, 'ens')    
+    let $tns := tt:getParam($request, 'tns')
+    let $gns := tt:getParam($request, 'gns')    
     let $global := tt:getParams($request, 'global')
     let $withStypeTrees := tt:getParams($request, 'stypeTrees')
     let $withAnnos := tt:getParams($request, 'annos')
@@ -91,7 +97,7 @@ declare function f:lcompsOp($request as element())
                  withAnnos="{$withAnnos}"
                  sgroupStyle="{$sgroupStyle}" />
     return
-        f:lcomps($enames, $tnames, $gnames, $global, $options, 
+        f:lcomps($enames, $tnames, $gnames, $ens, $tns, $gns, $global, $options, 
             $expandBaseType, $expandGroups, $nsmap, $schemas)
 };     
 
@@ -129,6 +135,9 @@ declare function f:lcompsOp($request as element())
 declare function f:lcomps($enames as element(nameFilter)*,
                           $tnames as element(nameFilter)*,
                           $gnames as element(nameFilter)*,
+                          $ens as element(nameFilter)*,
+                          $tns as element(nameFilter)*,
+                          $gns as element(nameFilter)*,                          
                           $global as xs:boolean?,
                           $options as element(options),
                           $expandBaseType as xs:boolean?,
@@ -141,16 +150,22 @@ declare function f:lcomps($enames as element(nameFilter)*,
     let $comps :=
         if (empty(($enames, $tnames, $gnames))) then $schemas/xs:element
         else (
-            if (not($enames)) then () else (
-                if ($global) then $schemas/xs:element
-                else $schemas/descendant::xs:element)
-                [tt:matchesNameFilter(@name, $enames)],
-            if (not($tnames)) then () else 
-                $schemas/(descendant::xs:simpleType, descendant::xs:complexType)
-                [tt:matchesNameFilter(@name, $tnames)],
+            if (not($enames)) then () else 
+                let $fschemas := if (not($ens)) then $schemas else $schemas[tt:matchesNameFilter(@targetNamespace, $ens)]
+                return (
+                    if ($global) then $fschemas/xs:element
+                    else $fschemas/descendant::xs:element
+                )[tt:matchesNameFilter(@name, $enames)],
+            if (not($tnames)) then () else
+                let $fschemas := if (not($tns)) then $schemas else $schemas[tt:matchesNameFilter(@targetNamespace, $tns)]
+                return
+                    $fschemas/(descendant::xs:simpleType, descendant::xs:complexType)
+                    [tt:matchesNameFilter(@name, $tnames)],
             if (not($gnames)) then () else 
-                $schemas/descendant::xs:group
-                [tt:matchesNameFilter(@name, $gnames)]
+                let $fschemas := if (not($gns)) then $schemas else $schemas[tt:matchesNameFilter(@targetNamespace, $gns)]
+                return
+                    $fschemas/descendant::xs:group
+                    [tt:matchesNameFilter(@name, $gnames)]
         )  
         
     let $compKindLabel :=

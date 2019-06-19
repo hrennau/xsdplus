@@ -11,7 +11,10 @@
       <operation name="treesheet" type="xs:string" func="treesheetOp">
          <param name="enames" type="nameFilter?" pgroup="comps"/> 
          <param name="tnames" type="nameFilter?" pgroup="comps"/>         
-         <param name="gnames" type="nameFilter?" pgroup="comps"/>         
+         <param name="gnames" type="nameFilter?" pgroup="comps"/>      
+         <param name="ens" type="nameFilter?"/>
+         <param name="tns" type="nameFilter?"/>
+         <param name="gns" type="nameFilter?"/>         
          <param name="global" type="xs:boolean?" default="true"/>         
          <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
          <param name="namespacePrefixLength" type="xs:integer?"/>ss
@@ -76,6 +79,9 @@ declare function f:treesheetOp($request as element())
     let $enames := tt:getParam($request, 'enames')
     let $tnames := tt:getParam($request, 'tnames')    
     let $gnames := tt:getParam($request, 'gnames')  
+    let $ens := tt:getParam($request, 'ens')    
+    let $tns := tt:getParam($request, 'tns')
+    let $gns := tt:getParam($request, 'gns')    
     let $global := tt:getParam($request, 'global')    
     let $nsmap := app:getTnsPrefixMap($schemas)
     let $groupNorm := tt:getParam($request, 'groupNormalization')
@@ -116,7 +122,7 @@ declare function f:treesheetOp($request as element())
         default return ()
     
     return
-        f:treesheet($enames, $tnames, $gnames, $global, $colRhs, 
+        f:treesheet($enames, $tnames, $gnames, $ens, $tns, $gns, $global, $colRhs, 
             $sgroupStyle, $namespacePrefixLength, $namespaceLabel, $itemReporter, $nsmap, $schemas)
 };
 
@@ -168,6 +174,9 @@ declare function f:reportAnno($n as node(), $options as element(options)?, $lang
 declare function f:treesheet($enames as element(nameFilter)*,
                              $tnames as element(nameFilter)*,
                              $gnames as element(nameFilter)*,
+                             $ens as element(nameFilter)*,
+                             $tns as element(nameFilter)*,
+                             $gns as element(nameFilter)*,                             
                              $global as xs:boolean?,
                              $colRhs as xs:integer?,
                              $sgroupStyle as xs:string,
@@ -188,7 +197,7 @@ declare function f:treesheet($enames as element(nameFilter)*,
                 attribute namespaceLabel {$namespaceLabel}
         }</options>
     let $nsmap := if ($nsmap) then $nsmap else app:getTnsPrefixMap($schemas)
-    let $ltree := app:ltree($enames, $tnames, $gnames, $global, $options, 
+    let $ltree := app:ltree($enames, $tnames, $gnames, $ens, $tns, $gns, $global, $options, 
                             (), $nsmap, $schemas)
     let $tsheet := f:ltree2Treesheet($ltree, $options, $itemReporter)                          
     return

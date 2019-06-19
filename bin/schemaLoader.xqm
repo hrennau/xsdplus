@@ -116,15 +116,28 @@ declare function f:getSchemas($request as element(), $retainChameleons as xs:boo
     f:schemaElems($rootSchemas, false())        
 };
 
-declare function f:schemaElems($rootSchemas as element(xs:schema)+,
+declare function f:schemaElems($rootSchemas as element()+,
                                $retainChameleons as xs:boolean) 
         as element()* {
-    (: let $_DEBUG := trace($retainChameleons, 'RETAIN_CHAMELEONS: ') :)
-    let $uris := for $rootSchema in $rootSchemas return base-uri($rootSchema)
-    let $uriNorms := for $uri in $uris return f:normalizeUri($uri)
+    (: support for schemas embedded in WSDL ... :)
+    let $rootSchemas := $rootSchemas/descendant-or-self::xs:schema
 
+(:    
+    let $rootSchemas_embedded := $rootSchemas[parent::*]
+    let $rootSchemas_top := $rootSchemas except $rootSchemas_embedded
+    
+    let $DUMMY := trace(count($rootSchemas_embedded), '#ROOT_SCHEMAS_EMBEDDED: ')
+    let $DUMMY := trace(count($rootSchemas_top), '#ROOT_SCHEMAS_TOP: ')
+:)    
+    let $uris := $rootSchemas ! base-uri(.)
+    let $uriNorms := $uris ! f:normalizeUri(.)
+(:    
+    let $elems_top := if (empty($rootSchemas_top)) then () else f:_schemaElems($rootSchemas_top, $retainChameleons, $uriNorms, ())[. instance of node()] 
+    let $elems_embedded := if (empty($rootSchemas_embedded)) then () else f:_schemaElems($rootSchemas_embedded, $retainChameleons, (), ())[. instance of node()]
+    
+    let $elems := ($elems_top, $elems_embedded)/.
+:)
     let $elems := f:_schemaElems($rootSchemas, $retainChameleons, $uriNorms, ())[. instance of node()]
-    (: let $DUMMY := trace($elems/root()/document-uri(.) => sort() , 'XSD_ELEM_URIS: ') :)
     let $errors := tt:extractErrors($elems)
     return
         if ($errors) then
@@ -239,7 +252,8 @@ declare function f:_schemaElems($rootSchemas as element(xs:schema)+,
    :)
   if (empty($remainingChildren)) then (
      $rootSchema,
-     let $children := $rootSchema/(xs:include, xs:import)[@schemaLocation/string()]  
+     let $children := $rootSchema/(xs:include, xs:import) (: [@schemaLocation/string()] :)  
+        (: 20190326 - predicate removed, in order to support imports without @schemaLocation, within WSDL :)
         (: 20091115, hjr: note the predicate - introduced because import without 
          :                @schemaLocation encountered in: owsExceptionReport.xsd ... 
          :)
@@ -256,18 +270,30 @@ declare function f:_schemaElems($rootSchemas as element(xs:schema)+,
    else
       let $actChild := $remainingChildren[1]
       let $nextRemainingChildren := $remainingChildren[position() gt 1]       
-      let $uri := resolve-uri($actChild/@schemaLocation, base-uri($actChild))
-      let $uriNorm := f:normalizeUri($uri)
       let $actChildContribution :=
-         if (not(doc-available($uriNorm))) then () else
+         let $uri := $actChild/@schemaLocation/resolve-uri(., base-uri($actChild))
+         let $uriNorm := $uri ! f:normalizeUri(.)
+         let $schemaRaw :=
+            if (empty($uriNorm)) then
+                let $currentSchema := $actChild/ancestor::xs:schema[1]
+                let $siblingSchemas := $actChild/root()//xs:schema[not(. is $currentSchema)]
+                return
+                    $siblingSchemas[@targetNamespace eq $actChild/@namespace]
+            else if (not(doc-available($uriNorm))) then () 
+            else doc($uriNorm)//xs:schema
+            
+         return if (not($schemaRaw)) then () else
          
-         let $schema := doc($uriNorm)//xs:schema
+         (: If import or include has no schemaLocation, a pseudo URI must be assigned in order to update $foundSoFar :)
+         let $uriNorm := if ($uriNorm) then $uriNorm else 
+            concat($rootSchema/base-uri(.), '~~~TNS~~~', $schemaRaw/@targetNamespace) (: pseudo URI :)
+         
          let $schema :=
             (: case A) not a chameleon => take as is :)
-            if ($actChild/self::xs:import or not($rootSchema/@targetNamespace) or $schema/@targetNamespace
+            if ($actChild/self::xs:import or not($rootSchema/@targetNamespace) or $schemaRaw/@targetNamespace
                 or $retainChameleons)
                then
-                  if ($foundSoFar = $uriNorm) then () else $schema
+                  if ($foundSoFar = $uriNorm) then () else $schemaRaw
 
             (: case B) a chameleon => transform to target namespace of including schema element :)
             else  
@@ -277,9 +303,9 @@ declare function f:_schemaElems($rootSchemas as element(xs:schema)+,
                   if ($foundSoFar = $uriUsed) then ()
                   else
                      let $prefixProposal := ()
-                     let $prefix := i:findPrefix($schema, $tns, $prefixProposal, ()) 
+                     let $prefix := i:findPrefix($schemaRaw, $tns, $prefixProposal, ()) 
                      return 
-                        i:changeTns($schema, $tns, $prefix)
+                        i:changeTns($schemaRaw, $tns, $prefix)
          return 
             if (empty($schema)) then () else
 

@@ -104,7 +104,7 @@ declare function f:valuesTree($docs as node()+,
         let $global := true()
         let $elemNameFilters := $enames ! tt:parseNameFilter(.)
         return
-            app:ltree($elemNameFilters, (), (),  $global, $options, (), $nsmap, $schemas)
+            app:ltree($elemNameFilters, (), (), (), (), (), $global, $options, (), $nsmap, $schemas)
     return
         if ($schemas and count($enames) ne count($ltrees//z:locationTree)) then
             let $enamesWithoutSchema := 

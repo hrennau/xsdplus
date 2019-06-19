@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2018-11-13T23:22:50.328+01:00 
+ : @version 2019-03-28T21:40:45.031+01:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -113,6 +113,9 @@ declare variable $toolScheme :=
       <param name="enames" type="nameFilter?" pgroup="comps"/>
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
+      <param name="ens" type="nameFilter?"/>
+      <param name="tns" type="nameFilter?"/>
+      <param name="gns" type="nameFilter?"/>
       <param name="global" type="xs:boolean?" default="false"/>
       <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
       <param name="stypeTrees" type="xs:boolean" default="true"/>
@@ -125,6 +128,9 @@ declare variable $toolScheme :=
       <param name="enames" type="nameFilter?" pgroup="comps"/>
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
+      <param name="ens" type="nameFilter?"/>
+      <param name="tns" type="nameFilter?"/>
+      <param name="gns" type="nameFilter?"/>
       <param name="global" type="xs:boolean?" default="true"/>
       <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
@@ -254,6 +260,9 @@ declare variable $toolScheme :=
       <param name="enames" type="nameFilter?" pgroup="comps"/>
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
+      <param name="ens" type="nameFilter?"/>
+      <param name="tns" type="nameFilter?"/>
+      <param name="gns" type="nameFilter?"/>
       <param name="global" type="xs:boolean?" default="true"/>
       <param name="expandBaseType" type="xs:boolean?" default="true"/>
       <param name="expandGroups" type="xs:boolean?" default="true"/>
@@ -269,6 +278,9 @@ declare variable $toolScheme :=
       <param name="enames" type="nameFilter?" pgroup="comps"/>
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
+      <param name="ens" type="nameFilter?"/>
+      <param name="tns" type="nameFilter?"/>
+      <param name="gns" type="nameFilter?"/>
       <param name="global" type="xs:boolean?" default="true"/>
       <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
       <param name="stypeTrees" type="xs:boolean?" default="true"/>
@@ -296,6 +308,9 @@ declare variable $toolScheme :=
       <param name="enames" type="nameFilter?" pgroup="comps"/>
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
+      <param name="ens" type="nameFilter?"/>
+      <param name="tns" type="nameFilter?"/>
+      <param name="gns" type="nameFilter?"/>
       <param name="global" type="xs:boolean?" default="true"/>
       <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
       <param name="noprefix" type="xs:boolean?" default="false"/>
@@ -354,6 +369,9 @@ declare variable $toolScheme :=
       <param name="enames" type="nameFilter?" pgroup="comps"/>
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
+      <param name="ens" type="nameFilter?"/>
+      <param name="tns" type="nameFilter?"/>
+      <param name="gns" type="nameFilter?"/>
       <param name="global" type="xs:boolean?" default="true"/>
       <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
       <param name="namespacePrefixLength" type="xs:integer?"/>ss
@@ -404,6 +422,9 @@ declare variable $toolScheme :=
       <param name="enames" type="nameFilter?" pgroup="comps"/>
       <param name="tnames" type="nameFilter?" pgroup="comps"/>
       <param name="gnames" type="nameFilter?" pgroup="comps"/>
+      <param name="ens" type="nameFilter?"/>
+      <param name="tns" type="nameFilter?"/>
+      <param name="gns" type="nameFilter?"/>
       <param name="global" type="xs:boolean?" default="true"/>
       <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
       <param name="noprefix" type="xs:boolean?" default="false"/>

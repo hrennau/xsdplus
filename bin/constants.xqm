@@ -16,7 +16,7 @@ declare variable $c:ANY_TYPE as xs:QName := QName($c:URI_XSD, 'anyType');
 declare variable $c:URI_LTREE as xs:string := 'http://www.xsdplus.org/ns/structure';
 declare variable $c:URI_BTREE as xs:string := 'http://www.xsdr.org/ns/structure';
 declare variable $c:URI_ERROR as xs:string := 'http://www.xsdplus.org/ns/errors';
-declare variable $c:_DEBUGFILE_RECURSION_PATHS as xs:string := 'LTREE_RECURSION_PATHS.txt';
+declare variable $c:_DEBUGFILE_RECURSION_PATHS as xs:string? := (); (: 'LTREE_RECURSION_PATHS.txt'; :)
 (:~
  : Returns the items received, logging the value if the specified log level
  : is greater or equal the global constant $m:LOG_LEVEL.

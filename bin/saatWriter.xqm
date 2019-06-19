@@ -13,7 +13,10 @@
          <param name="collapseElems" type="nameFilter?"/>
          <param name="enames" type="nameFilter?" pgroup="comps"/> 
          <param name="tnames" type="nameFilter?" pgroup="comps"/>         
-         <param name="gnames" type="nameFilter?" pgroup="comps"/>         
+         <param name="gnames" type="nameFilter?" pgroup="comps"/>  
+         <param name="ens" type="nameFilter?"/>
+         <param name="tns" type="nameFilter?"/>
+         <param name="gns" type="nameFilter?"/>         
          <param name="global" type="xs:boolean?" default="true"/>         
          <param name="groupNormalization" type="xs:integer" default="4" fct_max="5"/>
          <param name="noprefix" type="xs:boolean?" default="false"/>
@@ -69,6 +72,9 @@ declare function f:saatOp($request as element())
     let $enames := tt:getParam($request, 'enames')
     let $tnames := tt:getParam($request, 'tnames')    
     let $gnames := tt:getParam($request, 'gnames')  
+    let $ens := tt:getParam($request, 'ens')    
+    let $tns := tt:getParam($request, 'tns')
+    let $gns := tt:getParam($request, 'gns')    
     let $global := tt:getParam($request, 'global')    
     let $noprefix := tt:getParam($request, 'noprefix')
     let $nsmap := app:getTnsPrefixMap($schemas)
@@ -90,7 +96,7 @@ declare function f:saatOp($request as element())
     let $ltree := 
         if ($ltree) then $ltree
         else
-            f:ltree($enames, $tnames, $gnames, $global, $options, 
+            f:ltree($enames, $tnames, $gnames, $ens, $tns, $gns, $global, $options, 
                     $groupNorm, $nsmap, $schemas)
     let $saat := f:ltree2Saat($ltree, $options)                          
     return

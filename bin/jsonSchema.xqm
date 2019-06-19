@@ -126,10 +126,13 @@ declare function f:jschemaOp($request as element())
 
         let $tnames := ()    
         let $gnames := ()  
+        let $ens := ()
+        let $tns := ()
+        let $gns := ()
         let $global := ()    
         let $groupNorm := ()    
     
-        let $ltreeReport := ap:ltree($ename, $tnames, $gnames, $global, $options, 
+        let $ltreeReport := ap:ltree($ename, $tnames, $gnames, $ens, $tns, $gns, $global, $options, 
                                      $groupNorm, $nsmap, $schemas)
         return $ltreeReport
             
