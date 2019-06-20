@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2019-03-28T21:40:45.031+01:00 
+ : @version 2019-06-20T09:44:19.781+02:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -35,7 +35,8 @@ import module namespace a1="http://www.xsdplus.org/ns/xquery-functions" at
     "treesheetWriter.xqm",
     "typeGlobalizer.xqm",
     "viewBaseTreeWriter.xqm",
-    "viewTreeWriter.xqm";
+    "viewTreeWriter.xqm",
+    "xsdDiff.xqm";
 
 declare namespace m="http://www.xsdplus.org/ns/xquery-functions";
 declare namespace z="http://www.xsdplus.org/ns/structure";
@@ -435,6 +436,13 @@ declare variable $toolScheme :=
       <param name="ltree" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
       <pgroup name="in" minOccurs="1"/>
       <pgroup name="comps" maxOccurs="1"/>
+    </operation>
+    <operation name="xsdDiff" type="item()" func="xsdDiffOp" mod="xsdDiff.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
+      <param name="xsd1" type="docFOX" fct_minDocCount="1" sep="WS"/>
+      <param name="xsd2" type="docFOX" fct_minDocCount="1" sep="WS"/>
+      <param name="enames" type="nameFilter?"/>
+      <param name="global" type="xs:boolean?" default="true"/>
+      <param name="ignNamespaces" type="xs:boolean?" default="false"/>
     </operation>
     <operation name="_help" func="_help" mod="tt/_help.xqm">
       <param name="default" type="xs:boolean" default="false"/>
@@ -936,6 +944,17 @@ declare function m:execOperation_vtree($request as element())
 };
      
 (:~
+ : Executes operation 'xsdDiff'.
+ :
+ : @param request the request element
+ : @return the operation result
+ :)
+declare function m:execOperation_xsdDiff($request as element())
+        as item() {
+    a1:xsdDiffOp($request)        
+};
+     
+(:~
  : Executes operation '_help'.
  :
  : @param request the request element
@@ -1002,6 +1021,7 @@ declare function m:execOperation($req as element())
         else if ($opName eq 'valuesTree') then m:execOperation_valuesTree($req)
         else if ($opName eq 'vbtree') then m:execOperation_vbtree($req)
         else if ($opName eq 'vtree') then m:execOperation_vtree($req)
+        else if ($opName eq 'xsdDiff') then m:execOperation_xsdDiff($req)
         else if ($opName eq '_help') then m:execOperation__help($req)
         else
         tt:createError('UNKNOWN_OPERATION', concat('No such operation: ', $opName), 

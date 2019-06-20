@@ -21,12 +21,14 @@ import module namespace tt="http://www.ttools.org/xquery-functions" at
 declare namespace z="http://www.xsdplus.org/ns/structure";
 
 (:~
- : Returns schema components (element declarations, type definitions and group 
- : definitions) matching name filters.
+ : Returns schema components (element declarations, type definitions, group 
+ : definitions, attribute group definitions) matching name filters.
  :
  : @param enames a name filter for element declarations
  : @param tnames a name filter for type definitions 
  : @param gnames a name filter for group definitions
+ : @param hnames a name filter for attribute group definitions
+ : @param global only top-level element declarations are considered 
  : @return schema components matching the component type specific name filter 
  :)
 declare function f:getComponents($enames as element(nameFilter)?,
@@ -54,6 +56,56 @@ declare function f:getComponents($enames as element(nameFilter)?,
     if (not($hnames)) then () else 
         $schemas/xs:attributeGroup
         [tt:matchesNameFilter(@name, $hnames)]
+};
+
+(:~
+ : Returns schema components (element declarations, type definitions, group 
+ : definitions, attribute group definitions) matching name filters.
+ :
+ : @param enames a name filter for element declarations
+ : @param tnames a name filter for type definitions 
+ : @param gnames a name filter for group definitions
+ : @param hnames a name filter for attribute group definitions
+ : @param ens a name filter for the namespace of element declarations 
+ : @param tns a name filter for the namespace of type definitions 
+ : @param gns a name filter for the namespace of group definitions 
+ : @param hns a name filter for the namespace of attribute group definitions 
+ : @param global only top-level element declarations are considered 
+ : @return schema components matching the component type specific name filter 
+ :)
+declare function f:getComponents($enames as element(nameFilter)*,
+                                 $tnames as element(nameFilter)*,
+                                 $gnames as element(nameFilter)*,
+                                 $hnames as element(nameFilter)*,
+                                 $ens as element(nameFilter)*,
+                                 $tns as element(nameFilter)*,
+                                 $gns as element(nameFilter)*,
+                                 $hns as element(nameFilter)*,
+                                 $global as xs:boolean?,                                 
+                                 $schemas as element(xs:schema)+)
+        as element()* {
+        
+    let $enames := if (not($enames) and $ens) then '*' else $enames
+    let $tnames := if (not($tnames) and $tns) then '*' else $tnames
+    let $gnames := if (not($gnames) and $tns) then '*' else $gnames    
+    let $hnames := if (not($hnames) and $tns) then '*' else $hnames    
+    return if (empty(($enames, $tnames, $gnames, $hnames))) then $schemas/xs:element else (
+
+    if (not($enames)) then () else 
+        let $fschemas := if (not($ens)) then $schemas else $schemas[tt:matchesNameFilter(@targetNamespace, $ens)]
+        return (
+            if ($global) then $fschemas/xs:element 
+            else $fschemas/descendant::xs:element)[tt:matchesNameFilter(@name, $enames)],
+    if (not($tnames)) then () else
+        let $fschemas := if (not($tns)) then $schemas else $schemas[tt:matchesNameFilter(@targetNamespace, $tns)]
+        return $fschemas/(descendant::xs:simpleType, descendant::xs:complexType)[tt:matchesNameFilter(@name, $tnames)],
+    if (not($gnames)) then () else 
+        let $fschemas := if (not($gns)) then $schemas else $schemas[tt:matchesNameFilter(@targetNamespace, $gns)]
+        return $fschemas/descendant::xs:group[tt:matchesNameFilter(@name, $gnames)],
+    if (not($hnames)) then () else 
+        let $fschemas := if (not($hns)) then $schemas else $schemas[tt:matchesNameFilter(@targetNamespace, $hns)]
+        return $fschemas/descendant::xs:attributeGroup[tt:matchesNameFilter(@name, $gnames)]
+    )
 };
 
 (:~

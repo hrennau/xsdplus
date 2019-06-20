@@ -127,38 +127,52 @@ declare function f:ltree($enames as element(nameFilter)*,
                          $global as xs:boolean?,
                          $options as element(options),
                          $groupNormalization as xs:integer?,
-                         $nsmap as element(zz:nsMap),
+                         $nsmap as element(zz:nsMap)?,
                          $schemas as element(xs:schema)+)
         as element(z:locationTrees) {                         
     
+    let $comps := f:getComponents($enames, $tnames, $gnames, (), $ens, $tns, $gns, (), $global, $schemas)
+    return f:ltree($comps, $options, $groupNormalization, $nsmap, $schemas)
+};     
+
+(:~
+ : Writes a location tree.
+ :
+ : @param enames a name filter selecting element declarations
+ : @param tnames a name filter selecting type definitions
+ : @param gnames a name filter selecting group definitions
+ : @param global if true, only top-level element declarations are considered
+ : @param options they control the processing behaviour;
+ : @param groupNormalization controls the extent of group normalization
+ : @param nsmap normalized bindings of namespace URIs to prefixes 
+ : @param schemas the schema elements currently considered
+ : @return a report containing one or several location trees
+ :) 
+declare function f:ltree($comps as element()+,
+                         $options as element(options),
+                         $groupNormalization as xs:integer?,
+                         $nsmap as element(zz:nsMap)?,
+                         $schemas as element(xs:schema)+)
+        as element(z:locationTrees) {                         
+
+    let $nsmap := if ($nsmap) then $nsmap else app:getTnsPrefixMap($schemas)
     let $groupNormalization := ($groupNormalization, 4)[1]
     
     (: select schema components to be translated into location trees :)
-    let $comps :=
-        f:lcomps($enames, $tnames, $gnames, $ens, $tns, $gns, $global, $options, 
-            true(), true(), $nsmap, $schemas)
+    let $lcomps := f:lcomps($comps, $options, true(), true(), $nsmap, $schemas)
         
     let $ltrees :=
-        for $comp in $comps/*
+        for $lcomp in $lcomps/*
         let $ltree := 
-            (: let $DUMMY := trace('', 'COMPONENTS WRITTEN ...') :)
             let $sgroups := f:sgroupMembers($schemas, (), (), (), ())
-            let $raw := f:lcomps2Ltree($comp, $sgroups, $options, $nsmap)
-            (: let $DUMMY := trace('', 'RAW TREE CONSTRUCTED ...') :)            
+            let $raw := f:lcomps2Ltree($lcomp, $sgroups, $options, $nsmap)
             let $fine := f:finalizeLtree($raw, $groupNormalization)
-            (: let $DUMMY := trace('', 'TREE TIDIED UP ...') :)            
             return $fine
         let $root := $ltree/*[not(self::zz:nsMap)][1]
         order by $root/local-name(.), $root/namespace-uri(.)
-        return
-            $ltree
-    let $report :=
-        <z:locationTrees count="{count($ltrees)}">{
-            $ltrees
-        }</z:locationTrees>
-    (: let $DUMMY := trace((), ' - GOING to add NSBs') :)
-    return
-        app:addNSBs($report, $nsmap)
+        return $ltree
+    let $report := <z:locationTrees count="{count($ltrees)}">{$ltrees}</z:locationTrees>
+    return app:addNSBs($report, $nsmap)
 };     
 
 (:~

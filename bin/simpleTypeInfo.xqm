@@ -361,10 +361,18 @@ declare function f:stypeInfo($typeDef as element()?,
       if ($format eq 'xml') then $stypeTree
       else if ($format eq 'text') then f:stypeTree2StypeDesc($stypeTree, $format)
       else error()
-(:      
-      else if ($format eq 'features') then f:stypeSteps2Features($stepInfo)      
-      else f:stypeSteps2Text($stepInfo, $format, $request)
-:)      
+};
+
+declare function f:stypeInfoForTypeName($typeDef as xs:QName,
+                                        $format as xs:string?,
+                                        $nsmap as element(zz:nsMap)?,                             
+                                        $schemas as element(xs:schema)+)
+   as item()? {
+   let $stypeTree := f:stypeTreeForTypeName($typeDef, $nsmap, $schemas)
+   return
+      if ($format eq 'xml') then $stypeTree
+      else if ($format eq 'text') then f:stypeTree2StypeDesc($stypeTree, $format)
+      else error()
 };
 
 (:~

@@ -111,7 +111,7 @@ declare function f:getSchemas($request as element(), $retainChameleons as xs:boo
  :
  : @version 0.1-20100107
  :)
- declare function f:schemaElems($rootSchemas as element(xs:schema)+) 
+ declare function f:schemaElems($rootSchemas as element()+) 
         as element()* {
     f:schemaElems($rootSchemas, false())        
 };

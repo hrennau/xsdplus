@@ -77,6 +77,19 @@ declare function f:getLnodeChildElemDescriptors($elem as element())
 };
 
 (:~
+ : Returns for a location tree particle node the attribute descriptors.
+ :
+ : The particle node is expected to be an element descriptor.
+ :
+ : @param elem a location tree node representing an element
+ : @return the location tree nodes representing the element's attributes
+ :)
+declare function f:getLnodeAttributeDescriptors($elem as element())
+        as element()* {
+    $elem/z:_attributes_/(* except z:*)
+};
+
+(:~
  : Returns for a location tree particle node the names of all possible child elements. 
  : If the particle node is an element descriptor, the result consists of the names 
  : of all possible child elements. If the particle is a group descriptor (sequence, 
@@ -229,6 +242,118 @@ declare function f:getLcontentNonChoiceChildElemDescriptors($lcontent as element
         (: f:getLcontentTopLevelChoiceDescriptors($otherGroups/*) :)
     )
 };
+
+declare function f:ltreePath($lnode as element(), $pathContext as node()?)
+      as xs:string {     
+    let $path := string-join(
+        for $item in $lnode/ancestor-or-self::*[not($pathContext) or . >> $pathContext]
+        where not($item/ancestor::z:_annotation_) and 
+                  (not ($item/self::z:*) or local-name($item) = ('_choice_', '_sequence_', '_all_'))
+        return
+         if ($item/parent::z:_attributes_) then 
+            let $name := $item/@z:name
+            let $occ := f:ltreePath_occInd($item)
+            return concat('@', $name, $occ)
+         else if ($item/self::z:_attributes_) then ()
+         else (
+            (: insert pseudo step describing the actual choice (if appropriate) :)
+            if (not($item/parent::z:_choice_)) then () else
+               let $branchNr := concat('.', 1 + count($item/preceding-sibling::*))
+               (: if the parent level has several choices, the choice must be identified :)
+               let $choiceNr := 1 + $item/../count(preceding-sibling::z:_choice_)
+               let $choiceIndex :=
+                  if ($choiceNr eq 1) then () else concat('[', $choiceNr, ']')
+               let $occ := f:ltreePath_occInd($item/..)
+               return
+                  concat('#', $occ, $choiceIndex, $branchNr)
+            ,
+            (: the step itself :)
+            if ($item/self::z:_choice_) then () else 
+            
+            let $occ := f:ltreePath_occInd($item)
+            let $name := 
+               if ($item/self::z:_choice_) then '#'
+               else if ($item/self::z:_sequence_) then '%seq'               
+               else if ($item/self::z:_all_) then '%all'               
+               else if ($item/@z:name) then $item/@z:name
+               else name($item)
+            return concat($name, $occ)
+         ), '/')
+    return $path
+};
+
+(:~
+ : Returns all base tree data paths of bnodes with a given name.
+ :)
+declare function f:ltreePathsForItemName($itemName as xs:string,
+                                         $ltree as element(),
+                                         $nsmap as element(zz:nsMap))
+        as xs:string* {
+    let $isAtt := starts-with($itemName, '@')
+    let $useItemName := if ($isAtt) then substring($itemName, 2) else $itemName
+    let $qname := app:resolveNormalizedQName($useItemName, $nsmap)
+    let $lnodes :=
+        if ($isAtt) then $ltree//z:_attributes_/*[node-name(.) eq $qname]
+        else $ltree//*[not(self::z:*)][node-name(.) eq $qname]
+    for $apath in $lnodes/f:ltreePath(., ancestor::z:locationTree)
+    order by lower-case($apath)
+    return $apath
+};
+
+
+(:~
+ : Returns the step(s) connecting the parent node of a given location node's target node and the
+ : target node of that location node itself. The $mode parameter controls whether any intervening
+ : group descriptor (sequence, choice, all) is represented.
+ :
+ : @param node the location node in question
+ : @param mode controls the representation of the step
+ : @param nsmapAll a namespace map used for normalizing prefixes across different schema versions
+ : @return the trailing path step
+ :)
+declare function f:ltreePathLastStep($node as element(), 
+                                     $mode as xs:string?,
+                                     $nsmapAll as element(zz:nsMap))                                        
+        as xs:string {
+    let $name := concat('@'[$node/parent::z:_attributes_], app:normalizedQNameString(node-name($node), $nsmapAll)) 
+    let $parentNode := $node/ancestor::*[not(self::z:*)][1]
+    let $stepNodes := $node/ancestor::*[not(. << $parentNode)]
+        [if ($mode eq 'ignChoice') then not(self::z:_choice_)
+         else if ($mode eq 'ignChoiceSequence') then not(self::z:_choice_) and not(self::z:_sequence_)
+         else true()]          
+    return string-join(($stepNodes/app:normalizedQNameString(node-name(.), $nsmapAll), $name), '/')
+};
+
+(:~
+ : Returns the paths of all items of a location tree fragment, relative to
+ : the fragment root.
+ :
+ : @param root location node which is the root of the fragment
+ : @return the fragment lnode paths
+ :)
+declare function f:ltreeFragmentPaths($root as element())
+        as xs:string* {
+    let $annotationNodes := $root//z:_annotation_//*        
+    let $fragmentNodes := ($root//(* except (z:*, xs:*))) except $annotationNodes
+    return $fragmentNodes/app:ltreePath(., $root)
+};
+
+(:~
+ : Returns an indicator string reporting occurrence constraints. If
+ : $addBrackets is true, curly brackets are used in case of an indicator
+ : specifying one or two numbers.
+ :)
+declare function f:ltreePath_occInd($item as element())
+      as xs:string? {
+    if ($item/parent::z:_attributes_) then
+        if ($item/@use eq 'required') then ()
+        else if ($item/@default) then '?!'
+        else if ($item/@fixed) then '!'
+        else '?'               
+    else $item/@z:occ/(if (matches(., '^\d')) then concat('{', ., '}') else .)
+};      
+
+
 
 
 

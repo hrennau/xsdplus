@@ -111,8 +111,8 @@ declare function f:lcompsOp($request as element())
 
 (:~
  : Returns the location tree components of which a set of schema components 
- : is composed. The schema components are either element declarations, or type 
- : definitions, or group definitions. They are selected by a name filter.
+ : is composed. The schema components are a mixture of element declarations, type 
+ : definitions or group definitions. They are selected by a name filter.
  : If no name filter is specified, the set of schema components consists of
  : all global element declarations.
  :
@@ -145,28 +145,23 @@ declare function f:lcomps($enames as element(nameFilter)*,
                           $nsmap as element(),
                           $schemas as element(xs:schema)+)
         as element() {
-        
-    (: schema components to be described :)
-    let $comps :=
-        if (empty(($enames, $tnames, $gnames))) then $schemas/xs:element
-        else (
-            if (not($enames)) then () else 
-                let $fschemas := if (not($ens)) then $schemas else $schemas[tt:matchesNameFilter(@targetNamespace, $ens)]
-                return (
-                    if ($global) then $fschemas/xs:element
-                    else $fschemas/descendant::xs:element
-                )[tt:matchesNameFilter(@name, $enames)],
-            if (not($tnames)) then () else
-                let $fschemas := if (not($tns)) then $schemas else $schemas[tt:matchesNameFilter(@targetNamespace, $tns)]
-                return
-                    $fschemas/(descendant::xs:simpleType, descendant::xs:complexType)
-                    [tt:matchesNameFilter(@name, $tnames)],
-            if (not($gnames)) then () else 
-                let $fschemas := if (not($gns)) then $schemas else $schemas[tt:matchesNameFilter(@targetNamespace, $gns)]
-                return
-                    $fschemas/descendant::xs:group
-                    [tt:matchesNameFilter(@name, $gnames)]
-        )  
+    let $comps := f:getComponents($enames, $tnames, $gnames, (), $ens, $tns, $gns, (), $global, $schemas)
+    return
+        f:lcomps($comps, $options, $expandBaseType, $expandGroups, $nsmap, $schemas)
+};     
+
+(:~
+ : Returns the location tree components of which a set of schema components 
+ : is composed. The schema components are a mixture of element declarations, type 
+ : definitions or group definitions.
+ :)
+declare function f:lcomps($comps as element()+,
+                          $options as element(options),
+                          $expandBaseType as xs:boolean?,
+                          $expandGroups as xs:boolean?,
+                          $nsmap as element(),
+                          $schemas as element(xs:schema)+)
+        as element() {
         
     let $compKindLabel :=
         switch($comps[1]/local-name())
