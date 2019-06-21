@@ -191,11 +191,11 @@ declare function f:lnodesAttsDiff($lnode1 as element(),
         if (not($node1)) then
             let $apath2 := app:ltreePath($node2, $node2/ancestor::z:locationTree)
             let $loc2 := $node2/@z:loc
-            let $parentTypeLoc2 := distinct-values($lnode1/@z:typeLoc)
+            let $parentTypeLoc1 := distinct-values($lnode1/@z:typeLoc)
             return
                 <z:addedItem name="{$nameInfo}" apath="{$apath2}">{
                     attribute loc2 {$loc2},
-                    attribute parentTypeLoc {$parentTypeLoc2}
+                    attribute parentTypeLoc {$parentTypeLoc1}
                 }</z:addedItem>
         (: attribute not new :)
         else          
@@ -239,7 +239,7 @@ declare function f:lnodesChildElemsDiff($lnode1 as element()+,
         if (not($node1)) then
             let $apath2 := app:ltreePath($node2, $node2/ancestor::z:locationTree)
             let $loc2 := $node2/@z:loc
-            let $parentTypeLoc2 := distinct-values($lnode1/@z:typeLoc)
+            let $parentTypeLoc1 := distinct-values($lnode1/@z:typeLoc)
             let $deeperItems :=
                 if ($skipDeeperItems) then () else
                 let $underPaths := app:ltreeFragmentPaths($node2)
@@ -252,7 +252,7 @@ declare function f:lnodesChildElemsDiff($lnode1 as element()+,
             return
                 <z:addedItem name="{$nameInfo}" apath="{$apath2}">{
                     attribute loc2 {$loc2},
-                    attribute parentTypeLoc {$parentTypeLoc2},
+                    attribute parentTypeLoc {$parentTypeLoc1},
                     $deeperItems
                 }</z:addedItem>
         (: path exists :)

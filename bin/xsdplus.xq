@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2019-06-20T09:44:19.781+02:00 
+ : @version 2019-06-21T17:12:11.375+02:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -35,7 +35,9 @@ import module namespace a1="http://www.xsdplus.org/ns/xquery-functions" at
     "treesheetWriter.xqm",
     "typeGlobalizer.xqm",
     "viewBaseTreeWriter.xqm",
-    "viewTreeWriter.xqm",
+    "viewTreeWriter.xqm";
+
+import module namespace a3="http://www.xsdplus.org/ns/xquery-functions/xsddiff" at
     "xsdDiff.xqm";
 
 declare namespace m="http://www.xsdplus.org/ns/xquery-functions";
@@ -437,12 +439,16 @@ declare variable $toolScheme :=
       <pgroup name="in" minOccurs="1"/>
       <pgroup name="comps" maxOccurs="1"/>
     </operation>
-    <operation name="xsdDiff" type="item()" func="xsdDiffOp" mod="xsdDiff.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions">
+    <operation name="xsdDiff" type="item()" func="xsdDiffOp" mod="xsdDiff.xqm" namespace="http://www.xsdplus.org/ns/xquery-functions/xsddiff">
       <param name="xsd1" type="docFOX" fct_minDocCount="1" sep="WS"/>
       <param name="xsd2" type="docFOX" fct_minDocCount="1" sep="WS"/>
       <param name="enames" type="nameFilter?"/>
       <param name="global" type="xs:boolean?" default="true"/>
+      <param name="format" type="xs:string?" default="base" fct_values="base, std"/>
+      <param name="changeDetails" type="xs:string?" fct_values="all, long, short, none, vsn, vsn2, vsnTypes" default="all"/>
       <param name="ignNamespaces" type="xs:boolean?" default="false"/>
+      <param name="ignChanges" type="xs:string*" fct_values="changedType"/>
+      <param name="vocabulary" type="xs:string?" default="new" fct_values="new, legacy"/>
     </operation>
     <operation name="_help" func="_help" mod="tt/_help.xqm">
       <param name="default" type="xs:boolean" default="false"/>
@@ -951,7 +957,7 @@ declare function m:execOperation_vtree($request as element())
  :)
 declare function m:execOperation_xsdDiff($request as element())
         as item() {
-    a1:xsdDiffOp($request)        
+    a3:xsdDiffOp($request)        
 };
      
 (:~

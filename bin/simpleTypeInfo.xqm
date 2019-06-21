@@ -605,8 +605,11 @@ declare function f:getRestrictionInfo
       else if (exists($minLength)) then concat('minLen=', $minLength)
       else if (exists($maxLength)) then concat('maxLen=', $maxLength)
       else ()
+   let $facets := (
+      string-join(($length, $minMaxLength, $minMax, $totalDigits, $fractionDigits, $enums, $patterns), '; ')[string()],
+      '(restriction without facets)')[1]
    return
-      concat(': ', string-join(($length, $minMaxLength, $minMax, $totalDigits, $fractionDigits, $enums, $patterns), '; '))   
+      concat(': ', $facets)   
 };
 
 (:~

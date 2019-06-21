@@ -405,7 +405,7 @@ declare function f:resolveComponentLocator($loc as xs:string,
  :)
  
 (:~
- : Recursive helper function of 'resolveComponentLocator2'.
+ : Recursive helper function of 'resolveComponentLocator'.
  :
  : @param loc the component locator
  : @param nsmap a map associating namespace URIs with prefixes
