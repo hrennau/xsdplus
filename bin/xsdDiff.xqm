@@ -14,10 +14,14 @@
          <param name="enames" type="nameFilter?"/>
          <param name="global" type="xs:boolean?" default="true"/>         
          <param name="format" type="xs:string?" default="base" fct_values="base, std"/>
+         <param name="tpath" type="xs:boolean?" default="false"/>
+         <param name="igroup" type="xs:boolean?" default="false"/>
          <param name="changeDetails" type="xs:string?" fct_values="all, long, short, none, vsn, vsn2, vsnTypes" default="all"/>         
          <param name="ignNamespaces" type="xs:boolean?" default="false"/>
          <param name="ignChanges" type="xs:string*" fct_values="changedType"/>
          <param name="vocabulary" type="xs:string?" default="new" fct_values="new, legacy"/>
+         <param name="addedDeeperItems" type="xs:string?" default="count" fct_values="ignore, count, list"/>
+         <param name="removedDeeperItems" type="xs:string?" default="count" fct_values="ignore, count, list"/>         
       </operation>
     </operations>  
 :)  
@@ -58,18 +62,26 @@ declare function f:xsdDiffOp($request as element())
     let $xsds2 := tt:getParam($request, 'xsd2')/* => app:schemaElems()
     let $enames := tt:getParam($request, 'enames')
     let $format := tt:getParam($request, 'format')
+    let $tpath := tt:getParam($request, 'tpath')
+    let $igroup := tt:getParam($request, 'igroup')
     let $changeDetails := tt:getParam($request, 'changeDetails')
     let $global := tt:getParam($request, 'global')
     let $ignNamespaces := tt:getParam($request, 'ignNamespaces')
     let $ignChanges := tt:getParam($request, 'ignChanges')
     let $vocabulary := tt:getParam($request, 'vocabulary')
+    let $addedDeeperItems := tt:getParam($request, 'addedDeeperItems')    
+    let $removedDeeperItems := tt:getParam($request, 'removedDeeperItems')
     
     let $options :=
         <options format="{$format}"
+                 tpath="{$tpath}"
+                 igroup="{$igroup}"                 
                  changeDetails="{$changeDetails}"
                  ignNamespaces="{if ($ignNamespaces) then 'true' else 'false'}"
                  ignChanges="{$ignChanges}"
                  vocabulary="{$vocabulary}"
+                 addedDeeperItems="{$addedDeeperItems}"
+                 removedDeeperItems="{$removedDeeperItems}"
         />
     
     return f:xsdDiff($xsds1, $xsds2, $enames, $global, $options)

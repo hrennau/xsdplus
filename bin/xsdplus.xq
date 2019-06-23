@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2019-06-21T17:12:11.375+02:00 
+ : @version 2019-06-23T19:00:44.946+02:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -445,10 +445,14 @@ declare variable $toolScheme :=
       <param name="enames" type="nameFilter?"/>
       <param name="global" type="xs:boolean?" default="true"/>
       <param name="format" type="xs:string?" default="base" fct_values="base, std"/>
+      <param name="tpath" type="xs:boolean?" default="false"/>
+      <param name="igroup" type="xs:boolean?" default="false"/>
       <param name="changeDetails" type="xs:string?" fct_values="all, long, short, none, vsn, vsn2, vsnTypes" default="all"/>
       <param name="ignNamespaces" type="xs:boolean?" default="false"/>
       <param name="ignChanges" type="xs:string*" fct_values="changedType"/>
       <param name="vocabulary" type="xs:string?" default="new" fct_values="new, legacy"/>
+      <param name="addedDeeperItems" type="xs:string?" default="count" fct_values="ignore, count, list"/>
+      <param name="removedDeeperItems" type="xs:string?" default="count" fct_values="ignore, count, list"/>
     </operation>
     <operation name="_help" func="_help" mod="tt/_help.xqm">
       <param name="default" type="xs:boolean" default="false"/>

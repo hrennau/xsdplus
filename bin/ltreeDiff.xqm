@@ -49,8 +49,8 @@ declare function f:ltreeDiff($comp1 as element(),
         
     let $ltree1 := app:ltree($comp1, $ltreeOptions, (), $nsmap1, $schemas1)/z:locationTree[1]           
     let $ltree2 := app:ltree($comp2, $ltreeOptions, (), $nsmap2, $schemas2)/z:locationTree[1]
-    let $ltreeDiffItems := f:ltreeDiffItems($ltree1, $ltree2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, ())
-    let $ltreeDiffReport := f:ltreeDiffReport($ltreeDiffItems, $ltree1, $ltree2, $nsmap1, $nsmap2, $nsmap3, ())
+    let $ltreeDiffItems := f:ltreeDiffItems($ltree1, $ltree2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $options, ())
+    let $ltreeDiffReport := f:ltreeDiffReport($ltreeDiffItems, $ltree1, $ltree2, $nsmap1, $nsmap2, $nsmap3, $options, ())
     return $ltreeDiffReport
 };   
 
@@ -64,12 +64,13 @@ declare function f:ltreeDiffItems($ltree1 as element(z:locationTree),
                                   $nsmap1 as element(zz:nsMap),                                
                                   $nsmap2 as element(zz:nsMap),
                                   $nsmap3 as element(zz:nsMap),
+                                  $options as element(options),
                                   $diffConfig as element(diffConfig)?)                                
         as element()* {
     let $ltreeRoot1 := $ltree1/app:getLtreeRoot(.)
     let $ltreeRoot2 := $ltree2/app:getLtreeRoot(.)    
-    let $additionsAndChanges := f:ltreeDiffItemsRC($ltreeRoot1, $ltreeRoot2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $diffConfig)
-    let $removals := f:ltreeRemovalsRC($ltreeRoot1, $ltreeRoot2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3)
+    let $additionsAndChanges := f:ltreeDiffItemsRC($ltreeRoot1, $ltreeRoot2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $options, $diffConfig)
+    let $removals := f:ltreeRemovalsRC($ltreeRoot1, $ltreeRoot2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $options)
     return
         ($additionsAndChanges, $removals)
 };
@@ -84,13 +85,14 @@ declare function f:ltreeDiffItemsRC($lnode1 as element()+,
                                     $nsmap1 as element(zz:nsMap),
                                     $nsmap2 as element(zz:nsMap),
                                     $nsmap3 as element(zz:nsMap),
+                                    $options as element(options),
                                     $diffConfig as element(diffConfig)?)                           
     as element()* {
 (:  let $DUMMY := trace($lnode1/name(), 'LNODE1_NAME: ') :)
     let $elems1 := app:getLnodeChildElemDescriptors($lnode1)   
     let $elems2 := app:getLnodeChildElemDescriptors($lnode2)
-    let $attsDiff := f:lnodesAttsDiff($lnode1, $lnode2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $diffConfig)
-    let $elemsDiff := f:lnodesChildElemsDiff($lnode1, $lnode2, $elems1, $elems2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $diffConfig)    
+    let $attsDiff := f:lnodesAttsDiff($lnode1, $lnode2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $options, $diffConfig)
+    let $elemsDiff := f:lnodesChildElemsDiff($lnode1, $lnode2, $elems1, $elems2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $options, $diffConfig)    
     return (
         $attsDiff,
         $elemsDiff,
@@ -100,7 +102,7 @@ declare function f:ltreeDiffItemsRC($lnode1 as element()+,
         let $alignmentCandidates := $elems1[node-name(.) eq $name]
         let $elem1:= f:getLnodeAligned($elem2, $alignmentCandidates, $nsmap3)
         where $elem1
-        return f:ltreeDiffItemsRC($elem1, $elem2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $diffConfig)
+        return f:ltreeDiffItemsRC($elem1, $elem2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $options, $diffConfig)
     )
 };
 
@@ -113,6 +115,7 @@ declare function f:ltreeDiffReport($ltreeDiffItems as element()*,
                                    $nsmap1 as element(zz:nsMap),
                                    $nsmap2 as element(zz:nsMap),
                                    $nsmap3 as element(zz:nsMap),
+                                   $options as element(options),
                                    $diffConfig as element(diffConfig)?)                           
         as item()* {
     <z:diffReport crTime="{current-dateTime()}">{
@@ -178,6 +181,7 @@ declare function f:lnodesAttsDiff($lnode1 as element(),
                                   $nsmap1 as element(zz:nsMap),
                                   $nsmap2 as element(zz:nsMap),
                                   $nsmap3 as element(zz:nsMap),
+                                  $options as element(options),
                                   $diffConfig as element(diffConfig)?)                           
         as element()* {     
     let $atts1 := app:getLnodeAttributeDescriptors($lnode1)
@@ -199,7 +203,7 @@ declare function f:lnodesAttsDiff($lnode1 as element(),
                 }</z:addedItem>
         (: attribute not new :)
         else          
-            let $propsDiff := f:lnodePropertiesDiff($node1, $node2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $diffConfig)
+            let $propsDiff := f:lnodePropertiesDiff($node1, $node2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $options, $diffConfig)
             where $propsDiff
             return
                 let $apath1 := app:ltreePath($node1, $node1/ancestor::z:locationTree)
@@ -226,9 +230,10 @@ declare function f:lnodesChildElemsDiff($lnode1 as element()+,
                                         $nsmap1 as element(zz:nsMap),                                
                                         $nsmap2 as element(zz:nsMap),
                                         $nsmap3 as element(zz:nsMap),
+                                        $options as element(options),
                                         $diffConfig as element(diffConfig)?)                                    
         as element()* {
-    let $skipDeeperItems as xs:boolean := false()
+    let $addedDeeperItems := $options/@addedDeeperItems/string()
     for $node2 in $elems2
     let $name := $node2/node-name(.)
     let $nameInfo := $node2/@z:name/string()
@@ -241,13 +246,17 @@ declare function f:lnodesChildElemsDiff($lnode1 as element()+,
             let $loc2 := $node2/@z:loc
             let $parentTypeLoc1 := distinct-values($lnode1/@z:typeLoc)
             let $deeperItems :=
-                if ($skipDeeperItems) then () else
-                let $underPaths := app:ltreeFragmentPaths($node2)
-                return
-                    if (empty($underPaths)) then () else
-                        <z:addedDeeperItems>{
-                            for $p in $underPaths order by lower-case($p) return <z:addedDeeperItem arpath="{$p}"/>
-                        }</z:addedDeeperItems>
+                if ($addedDeeperItems eq 'ignore') then () 
+                else
+                    let $underPaths := app:ltreeFragmentPaths($node2)
+                    return
+                        if (empty($underPaths)) then () 
+                        else if ($addedDeeperItems eq 'count') then attribute countAddedDeeperItems {count($underPaths)} 
+                        else
+                            <z:addedDeeperItems>{
+                                for $p in $underPaths order by lower-case($p) 
+                                return <z:addedDeeperItem arpath="{$p}"/>
+                            }</z:addedDeeperItems>
             
             return
                 <z:addedItem name="{$nameInfo}" apath="{$apath2}">{
@@ -257,7 +266,7 @@ declare function f:lnodesChildElemsDiff($lnode1 as element()+,
                 }</z:addedItem>
         (: path exists :)
         else           
-            let $propsDiff := f:lnodePropertiesDiff($node1, $node2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $diffConfig) 
+            let $propsDiff := f:lnodePropertiesDiff($node1, $node2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $options, $diffConfig) 
             return if (not($propsDiff)) then () else
                 
                 let $apath1 := app:ltreePath($node1, $node1/ancestor::z:locationTree)
@@ -289,15 +298,16 @@ declare function f:ltreeRemovalsRC(
                                $schemas2 as element(xs:schema)*,
                                $nsmap1 as element(zz:nsMap),
                                $nsmap2 as element(zz:nsMap),
-                               $nsmap3 as element(zz:nsMap))                           
+                               $nsmap3 as element(zz:nsMap),
+                               $options as element(options))                           
         as element()* {
     let $atts1 := app:getLnodeAttributeDescriptors($lnode1)
     let $atts2 := app:getLnodeAttributeDescriptors($lnode2)
     let $elems1 := app:getLnodeChildElemDescriptors($lnode1)   
     let $elems2 := app:getLnodeChildElemDescriptors($lnode2)    
     
-    let $attsRemoval := f:ltreeAttRemovals($lnode1, $lnode2, $atts1, $atts2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3)
-    let $elemsRemoval := f:ltreeChildElemRemovals($lnode1, $lnode2, $elems1, $elems2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3)    
+    let $attsRemoval := f:ltreeAttRemovals($lnode1, $lnode2, $atts1, $atts2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $options)
+    let $elemsRemoval := f:ltreeChildElemRemovals($lnode1, $lnode2, $elems1, $elems2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $options)    
     return (
         $attsRemoval,
         $elemsRemoval,
@@ -308,7 +318,7 @@ declare function f:ltreeRemovalsRC(
         let $elem2 := f:getLnodeAligned($elem1, $alignmentCandidates, $nsmap3)              
         where $elem2
         return
-            f:ltreeRemovalsRC($elem1, $elem2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3)
+            f:ltreeRemovalsRC($elem1, $elem2, $schemas1, $schemas2, $nsmap1, $nsmap2, $nsmap3, $options)
     )        
 
 };
@@ -317,6 +327,15 @@ declare function f:ltreeRemovalsRC(
  : Reports the removal of attributes observed when comparing two location trees.
  : A "removed" attribute is an attribute found in the first location tree but not
  : found in the matching location of the second location tree.
+ :
+ : A removal is mapped to an item removal descriptor:
+ : <removedItem name="..." apath="..." loc="..." parentTypeLoc2=""/>
+ : 
+ : where: 
+ : @name the qualified item name, preceded by "@"
+ : @apath the ltree path of the removed attribute
+ : @loc the location of the removed attribute
+ : @parentTypeLoc2 the location of the type from which the attribute has been removed
  :)
 declare function f:ltreeAttRemovals($lnode1 as element()+, 
                                     $lnode2 as element(),
@@ -326,35 +345,52 @@ declare function f:ltreeAttRemovals($lnode1 as element()+,
                                     $schemas2 as element(xs:schema)*,
                                     $nsmap1 as element(zz:nsMap),                                
                                     $nsmap2 as element(zz:nsMap),
-                                    $nsmap3 as element(zz:nsMap))                              
+                                    $nsmap3 as element(zz:nsMap),
+                                    $options as element(options))                              
         as element()* {
     for $node1 in $atts1
     let $name := resolve-QName($node1/@z:name, $node1)
     let $nameInfo := concat('@', $node1/@z:name/string())    
-    let $node2 := $atts2[resolve-QName(@z:name, .) eq $name]    
+    let $node2 := $atts2[resolve-QName(@z:name, .) eq $name]   
+    where not ($node2)
     return
-        if ($node2) then () else
-            let $path1 := app:ltreePath($node1, $node1/ancestor::z:locationTree)
-            let $loc1 := $node1/@z:loc
-            let $parentTypeLoc2 := 
-                let $try := $lnode2/@z:typeLoc
-                return
-                    if (not(starts-with($try, 'simpleType'))) then $try
-                    else
-                        let $anc := $lnode2/ancestor::*[@z:typeLoc, @z:groupName][1]
-                        return ($anc/@z:typeLoc, $anc/@z:groupName/concat('group(', ., ')'))[1]
+        let $path1 := app:ltreePath($node1, $node1/ancestor::z:locationTree)
+        let $loc1 := $node1/@z:loc
+        let $parentTypeLoc2 := 
+            let $try := $lnode2/@z:typeLoc
             return
-                <z:removedItem name="{$nameInfo}" apath="{$path1}">{
-                    attribute loc {$loc1},
-                    attribute parentTypeLoc2 {$parentTypeLoc2}
-                }</z:removedItem>
+                if (not(starts-with($try, 'simpleType'))) then $try
+                else
+                    (: version 2: complex type with simple content has been reverted to a simple type;
+                                  @parentLoc2 is set to the type or group thus changed :)
+                    let $anc := $lnode2/ancestor::*[@z:typeLoc, @z:groupName][1]
+                    return ($anc/@z:typeLoc, $anc/@z:groupName/concat('group(', ., ')'))[1]            
+        return
+            <z:removedItem name="{$nameInfo}" apath="{$path1}">{
+                attribute loc {$loc1},
+                attribute parentTypeLoc2 {$parentTypeLoc2}
+            }</z:removedItem>
 };
 
 (:~
  : Reports the removal of elements observed when comparing two location trees.
  : A "removed" element is an element found in the first location tree but not
  : found in the matching location of the second location tree.
- :)
+ :
+ : A removal is mapped to an item removal descriptor:
+ : <removedItem name="..." apath="..." loc="..." parentTypeLoc2=""
+ :   <removedDeeperItems>
+ :     <removeDeeperItem arpath="..."/>
+ :   </removedDeeperItems>
+ : </removedItem>
+ : 
+ : where: 
+ : @name the qualified item name
+ : @apath the ltree path of the removed element
+ : @loc the location of the removed element
+ : @parentTypeLoc2 the location of the type from which the element has been removed
+ : @arpath the ltree path of a removed descendant, relative to the removed element
+:)
 declare function f:ltreeChildElemRemovals($lnode1 as element()+, 
                                           $lnode2 as element(),
                                           $elems1 as element()*, 
@@ -363,9 +399,10 @@ declare function f:ltreeChildElemRemovals($lnode1 as element()+,
                                           $schemas2 as element(xs:schema)*,
                                           $nsmap1 as element(zz:nsMap),                                
                                           $nsmap2 as element(zz:nsMap),
-                                          $nsmap3 as element(zz:nsMap))                                    
+                                          $nsmap3 as element(zz:nsMap),
+                                          $options as element(options))                                    
         as element()* {
-    let $skipDeeperItems as xs:boolean := false() return
+    let $removedDeeperItems := $options/@removedDeeperItems/string()
     
     (: visit child elements of version1 element :)
     for $node1 in $elems1
@@ -373,26 +410,30 @@ declare function f:ltreeChildElemRemovals($lnode1 as element()+,
     let $nameInfo := $node1/@z:name/string()
     let $alignmentCandidates := $elems2[node-name(.) eq $name]
     let $node2 := f:getLnodeAligned($node1, $alignmentCandidates, $nsmap3)    
+    where not($node2)
     return
-        if ($node2) then () else
-        
         (: element was removed :)        
         let $path1 := app:ltreePath($node1, $node1/ancestor::z:locationTree)
-        let $loc1 := $node1/@z:loc   (: location in xsd#1 :)
+        let $loc1 := $node1/@z:loc
         let $parentTypeLoc2 := 
             let $try := $lnode2/@z:typeLoc
             return
                 if (not(starts-with($try, 'simpleType'))) then $try
                 else
+                    (: version 2: complex type with complex content has been reverted to a simple type;
+                                  @parentLoc2 is set to the type or group thus changed :)                
                     let $anc := $lnode2/ancestor::*[@z:typeLoc, @z:groupName][1]
                     return ($anc/@z:typeLoc, $anc/@z:groupName/concat('group(', ., ')'))[1]            
         let $deeperItems := 
-            if ($skipDeeperItems) then () else
+            if ($removedDeeperItems eq 'ignore') then () else
             let $underPaths := app:ltreeFragmentPaths($node1)
             return
-                if (empty($underPaths)) then () else
+                if (empty($underPaths)) then () 
+                else if ($removedDeeperItems eq 'count') then attribute countRemovedDeeperItems {count($underPaths)}
+                else
                     <z:removedDeeperItems>{
-                        for $p in $underPaths order by lower-case($p) return <z:removedDeeperItem arpath="{$p}"/>
+                        for $p in $underPaths order by lower-case($p) 
+                        return <z:removedDeeperItem arpath="{$p}"/>
                     }</z:removedDeeperItems>
         return
             <z:removedItem name="{$nameInfo}" apath="{$path1}">{
@@ -419,6 +460,7 @@ declare function f:lnodePropertiesDiff($lnode1 as element()+,
                                        $nsmap1 as element(zz:nsMap),
                                        $nsmap2 as element(zz:nsMap),
                                        $nsmap3 as element(zz:nsMap),
+                                       $options as element(options),
                                        $diffConfig as element(diffConfig)?)                           
         as element()* { 
     let $typeDesc1 := f:typeDescriptionForLnode($lnode1, $schemas1, $nsmap1)        
@@ -470,7 +512,7 @@ declare function f:lnodePropertiesDiff($lnode1 as element()+,
             <typeDesc>{$typeDesc2}</typeDesc>[$typeDesc1 and $typeDesc2],
             <use>{($lnode2/@use/string(), 'optional')[1]}</use>                
         }</lnode>            
-    return f:getLnodePropertiesDiffReport($p1, $p2, $nsmap1, $nsmap2, $nsmap3, $diffConfig)    
+    return f:getLnodePropertiesDiffReport($p1, $p2, $nsmap1, $nsmap2, $nsmap3, $options, $diffConfig)    
 };
 
 (:~
@@ -489,6 +531,7 @@ declare function f:getLnodePropertiesDiffReport($p1 as element(lnode),
                                                 $nsmap1 as element(zz:nsMap), 
                                                 $nsmap2 as element(zz:nsMap),
                                                 $nsmap3 as element(zz:nsMap),
+                                                $options as element(options),
                                                 $diffConfig as element(diffConfig)?)                           
         as element()* {
     if (deep-equal($p1, $p2)) then () else 
@@ -543,12 +586,12 @@ declare function f:getLnodePropertiesDiffReport($p1 as element(lnode),
         let $diff :=        
             <z:changedType type="{$typeName1}" namespaceFrom="{$p1/type/@uri}" namespaceTo="{$p2/type/@uri}"/>
         return
-            f:editPropertiesDiffReport($diff, $p1, $p2, $diffConfig)           
+            f:editPropertiesDiffReport($diff, $p1, $p2, $options, $diffConfig)           
     
     else if (QName($p1/type/@uri, $p1/type/@name) ne QName($p2/type/@uri, $p2/type/@name)) then
         let $diff := <z:changedType fr="{$typeName1}" to="{$typeName2}"/>
         return
-            f:editPropertiesDiffReport($diff, $p1, $p2, $diffConfig)
+            f:editPropertiesDiffReport($diff, $p1, $p2, $options, $diffConfig)
     else (),
                 
     if ($p1/type/@nname eq "" and $p2/type/@nname eq "") then ()
@@ -562,7 +605,7 @@ declare function f:getLnodePropertiesDiffReport($p1 as element(lnode),
                 <to typeInfo="{$p2/typeDesc}"/>
             </z:changedTypeDef>
         return
-            f:editPropertiesDiffReport($diff, $p1, $p2, $diffConfig),
+            f:editPropertiesDiffReport($diff, $p1, $p2, $options, $diffConfig),
 
     if (deep-equal($p1/use, $p2/use)) then ()
     else <z:changedUse fr="{$p1/use}" to="{$p2/use}"/>,
@@ -578,6 +621,7 @@ declare function f:getLnodePropertiesDiffReport($p1 as element(lnode),
 declare function f:editPropertiesDiffReport($diff as element(), 
                                             $p1 as element(lnode), 
                                             $p2 as element(lnode), 
+                                            $options as element(options),
                                             $cfg as element(diffConfig)?)
         as element()? {
                 

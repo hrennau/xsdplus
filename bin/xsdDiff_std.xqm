@@ -63,23 +63,29 @@ declare function f:xsdBaseDiff2StdRC($n as node()?, $options as element(options)
         }
         
     case element(z:component) return
+        (: the content of changed components is reorganized :)
         if ($n/parent::z:componentsChanged) then
             let $igroup := $options/@igroup/xs:boolean(.)
             let $items := $n/z:items/f:xsdBaseDiff2StdRC(., $options)
             let $added := $items//z:addedItem 
             let $removed := $items//z:removedItem            
-            let $changed := $items//z:changedItem
-            let $changeReport := if ($igroup) then $items else (           
-                <z:addedItems>{
-                    $added/element {node-name(.)} {ancestor::z:items/@name, @* except @name, node()}
-                }</z:addedItems>[$added],
-                <z:changedItems>{
-                    $changed/element {node-name(.)} {ancestor::z:items/@name, @* except @name, node()}
-                }</z:changedItems>,
-                <z:removedItems>{
-                    $removed/element {node-name(.)} {ancestor::z:items/@name, @* except @name, node()}
-                }</z:removedItems>[$removed]
-            )
+            let $changed := $items//z:changedItem            
+            
+            let $changeReport := 
+                (: *** if igroup=true, grouping is by item name ... :)
+                if ($igroup) then $items 
+                (: *** otherwise, grouping is by change type, added | changed | removed :)
+                else (           
+                    <z:addedItems>{
+                        $added/element {node-name(.)} {ancestor::z:items/@name, @* except @name, node()}
+                    }</z:addedItems>[$added],
+                    <z:changedItems>{
+                        $changed/element {node-name(.)} {ancestor::z:items/@name, @* except @name, node()}
+                    }</z:changedItems>[$changed],
+                    <z:removedItems>{
+                        $removed/element {node-name(.)} {ancestor::z:items/@name, @* except @name, node()}
+                    }</z:removedItems>[$removed]
+                )
             return
                 element {node-name($n)} {
                     $n/@* ! f:xsdBaseDiff2StdRC(., $options),
@@ -91,77 +97,77 @@ declare function f:xsdBaseDiff2StdRC($n as node()?, $options as element(options)
                 $n/node() ! f:xsdBaseDiff2StdRC(., $options)                
             }
         
+    (: <z:items> contains all items with a particular item name :)    
     case element(z:items) return
         let $tpath := $options/@tpath/xs:boolean(.)
         return
-        
-        (: *** case: without trailing paths :)    
+    
         if (not($tpath)) then
              element {node-name($n)} {
                 $n/@* ! f:xsdBaseDiff2StdRC(., $options),
                 $n/node() ! f:xsdBaseDiff2StdRC(., $options)                
-            }           
-            
-        (: *** case: with trailing paths :)            
-        else           
-            
-        let $addedItems := $n/z:addedItems
-        let $changedItems := $n/z:changedItems
-        let $removedItems := $n/z:removedItems
-        let $unchangedItems := $n/z:unchangedItems
-        let $DUMMY := trace( count($unchangedItems/*) , 'COUNT_UNCHANGED: ')        
-        let $notRemovedItems := $n/z:notRemovedItems
-        let $allItems := $addedItems | $changedItems | $removedItems | $unchangedItems | $notRemovedItems
-
-        let $addedItemsAggregated :=
-            if (not($addedItems)) then () else
-                let $otherItems := ($allItems except $addedItems)/*            
-                let $items := f:getTrailingPathItems($addedItems/*, $otherItems)            
-                return
-                    <z:addedItems countTrailingPaths="{count($items)}" countPaths="{count($addedItems/*)}">{
-                        for $i in $items order by $i/@path return $i                    
-                    }</z:addedItems>
-            
-        let $changedItemsAggregated :=
-            if (not($changedItems)) then () else
-                let $otherItems := ($allItems except $changedItems)/*
-                let $items := f:getTrailingPathItems($changedItems/*, $otherItems)
-                return
-                    <z:changedItems countTrailingPaths="{count($items)}" countPaths="{count($changedItems/*)}">{
-                        for $i in $items order by $i/@path return $i                    
-                    }</z:changedItems>
-            
-        let $removedItemsAggregated :=
-            if (not($removedItems)) then () else
-                let $otherItems := ($allItems except $removedItems)/*
-                let $items := f:getTrailingPathItems($removedItems/*, $otherItems)
-                return
-                    <z:removedItems countTrailingPaths="{count($items)}" countPaths="{count($removedItems/*)}">{
-                        for $i in $items order by $i/@path return $i                    
-                    }</z:removedItems>
-        return
-            element {node-name($n)} {
-                $n/@name/f:xsdBaseDiff2StdRC(., $options),
-                $addedItemsAggregated/f:xsdBaseDiff2StdRC(., $options),
-                $changedItemsAggregated/f:xsdBaseDiff2StdRC(., $options),
-                $removedItemsAggregated/f:xsdBaseDiff2StdRC(., $options),               
-                ()
             }
+            
+        (: *** tpath=true: provide distinctive trailing path :)           
+        else            
+            let $addedItems := $n/z:addedItems
+            let $changedItems := $n/z:changedItems
+            let $removedItems := $n/z:removedItems
+            let $unchangedItems := $n/z:unchangedItems
+            let $DUMMY := trace( count($unchangedItems/*) , 'COUNT_UNCHANGED: ')        
+            let $notRemovedItems := $n/z:notRemovedItems
+            let $allItems := $addedItems | $changedItems | $removedItems | $unchangedItems | $notRemovedItems
+
+            let $addedItemsAggregated :=
+                if (not($addedItems)) then () else
+                    let $otherItems := ($allItems except $addedItems)/*            
+                    let $items := f:getTrailingPathItems($addedItems/*, $otherItems)            
+                    return trace(
+                        <z:addedItems countTrailingPaths="{count($items)}" countPaths="{count($addedItems/*)}">{
+                            for $i in $items order by $i/@path return $i                    
+                        }</z:addedItems> , 'ADDED_ITEMS: ')
+            
+            let $changedItemsAggregated :=
+                if (not($changedItems)) then () else
+                    let $otherItems := ($allItems except $changedItems)/*
+                    let $items := f:getTrailingPathItems($changedItems/*, $otherItems)
+                    return
+                        <z:changedItems countTrailingPaths="{count($items)}" countPaths="{count($changedItems/*)}">{
+                            for $i in $items order by $i/@path return $i                    
+                        }</z:changedItems>
+            
+            let $removedItemsAggregated :=
+                if (not($removedItems)) then () else
+                    let $otherItems := ($allItems except $removedItems)/*
+                    let $items := f:getTrailingPathItems($removedItems/*, $otherItems)
+                    return
+                        <z:removedItems countTrailingPaths="{count($items)}" countPaths="{count($removedItems/*)}">{
+                            for $i in $items order by $i/@path return $i                    
+                        }</z:removedItems>
+            return
+                element {node-name($n)} {
+                    $n/@name/f:xsdBaseDiff2StdRC(., $options),
+                    $addedItemsAggregated/f:xsdBaseDiff2StdRC(., $options),
+                    $changedItemsAggregated/f:xsdBaseDiff2StdRC(., $options),
+                    $removedItemsAggregated/f:xsdBaseDiff2StdRC(., $options),               
+                    ()
+                }
     case element() return
         let $skipDeeperItems := $options/@skipDeeperItems/xs:boolean(.)
         let $changeDetails := $options/@changeDetails/string(.)
-        return
-        
-        if ($skipDeeperItems and ($n/self::z:addedDeeperItems or $n/self::z:removedDeeperItems)) then () else
-        element {node-name($n)} {
-            $n/@* ! f:xsdBaseDiff2StdRC(., $options),
-            if (not($n/self::z:changedItem) or $changeDetails eq 'all') then             
-                $n/node()/f:xsdBaseDiff2StdRC(., $options)
-            else if ($changeDetails eq 'none') then 
-                () 
-            else 
-                attribute changes {f:getChangeDescriptor($n, $changeDetails)}
-        }
+        return        
+            if ($skipDeeperItems and 
+                ($n/self::z:addedDeeperItems or $n/self::z:removedDeeperItems)) then () 
+            else
+                element {node-name($n)} {
+                $n/@* ! f:xsdBaseDiff2StdRC(., $options),
+                if (not($n/self::z:changedItem) or $changeDetails eq 'all') then             
+                    $n/node()/f:xsdBaseDiff2StdRC(., $options)
+                else if ($changeDetails eq 'none') then 
+                    () 
+                else 
+                    attribute changes {f:getChangeDescriptor($n, $changeDetails)}
+            }
     case attribute(loc) return 
         let $skipLoc := $options/@skipLoc/xs:boolean(.)
         return if ($skipLoc) then () else $n        
@@ -194,30 +200,29 @@ declare function f:xsdBaseDiff2StdRC($n as node()?, $options as element(options)
         return
             attribute {node-name($n)} {$value}
 
-    case attribute() return
+    case attribute(apath) | attribute(arpath) return
         let $apath := $options/@apath/xs:boolean(.)    
         let $gpath := $options/@gpath/xs:boolean(.)  
-        let $noprefix := $options/@noprefix/xs:boolean(.)        
-        return
-        
-        if (not($n/self::attribute(apath) or $n/self::attribute(arpath))) then $n else
-        let $value :=
-            let $v := 
-                if ($apath) then $n
-                else if ($gpath) then f:deAnnotatePathRetainingStructure($n)
-                else f:deAnnotatePath($n)
-            let $v := if (not($noprefix)) then $v else f:dePrefixPath($v)
-            return $v
-        let $name := 
-            if ($apath) then local-name($n)
-            else if ($gpath) then 
-                if (local-name($n) eq 'arpath') then 'grpath' else 'gpath' 
-            else 
-                if (local-name($n) eq 'arpath') then 'rpath' else 'path'
-        return
-            attribute {$name} {$value}
+        let $noprefix := $options/@noprefix/xs:boolean(.)   
+        return        
+            let $value :=
+                let $v := 
+                    if ($apath) then $n
+                    else if ($gpath) then f:deAnnotatePathRetainingStructure($n)
+                    else f:deAnnotatePath($n)
+                let $v := if (not($noprefix)) then $v else f:dePrefixPath($v)
+                return $v
+            let $name := 
+                if ($apath) then local-name($n)
+                else if ($gpath) then 
+                    if (local-name($n) eq 'arpath') then 'grpath' else 'gpath' 
+                else 
+                    if (local-name($n) eq 'arpath') then 'rpath' else 'path'
+            return
+                attribute {$name} {$value}
 
-
+    case attribute() return $n
+    
     default return $n
 
 };
