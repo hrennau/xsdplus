@@ -108,6 +108,9 @@ declare function f:ltreeDiffItemsRC($lnode1 as element()+,
 
 (:~
  : Transforms a diff list into a diff report.
+ :
+ : Change items are grouped by item name, and further by change kind (addedItems, changedItems, removedItems).
+ : Unchanged items: all paths which existed in version 1 and have not been changed or removed.
  :)
 declare function f:ltreeDiffReport($ltreeDiffItems as element()*,
                                    $ltree1 as element(),
@@ -121,6 +124,7 @@ declare function f:ltreeDiffReport($ltreeDiffItems as element()*,
     <z:diffReport crTime="{current-dateTime()}">{
         let $addedPathPrefixes := $ltreeDiffItems/self::z:addedItem[not(starts-with(@name, '@'))]/concat(@apath, '/')    
         
+        (: loop over every item name for which a change has been recorded :)
         for $name in distinct-values($ltreeDiffItems/@name)
         let $myItems := for $item in $ltreeDiffItems[@name eq $name] order by $item/@apath return $item        
         let $added := $myItems/self::z:addedItem    

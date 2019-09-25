@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2019-06-23T19:00:44.946+02:00 
+ : @version 2019-08-19T13:29:42.379+02:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at

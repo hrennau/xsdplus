@@ -161,6 +161,10 @@ declare function f:ltree2VtreeRC($n as node(),
 
     case element(z:_stypeTree_) return ()
     
+    (: 20190819, hjr: hide _all_ group container element :)
+    case element(z:_all_) return
+        for $c in $n/node() return f:ltree2VtreeRC($c, $options, $omap)
+        
     case element(z:_sequence_) | element(z:_choice_) | element(z:_all_) return
         element {node-name($n)} {
             for $a in $n/@* return f:ltree2VtreeRC($a, $options, $omap),

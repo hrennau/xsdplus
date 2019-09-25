@@ -305,7 +305,7 @@ declare function f:finalizeBaseDiffRC_copyElem($elem as element(),
     }
 };
 
-declare function f:xsdsChanged($ltreeDiffs as element(),
+declare function f:xsdsChanged($ltreeDiffs as element()*,
                                $nsmap1 as element(zz:nsMap),
                                $nsmap2 as element(zz:nsMap),
                                $schemas1 as element(xs:schema)*,

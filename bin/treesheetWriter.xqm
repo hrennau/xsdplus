@@ -282,6 +282,10 @@ declare function f:ltree2TreesheetRC($n as node(),
         return
             $prefix || $useName
             
+    (: 20190819, hjr: hide _all_ group container element :)
+    case element(z:_all_) return
+        for $c in $n/node() return f:ltree2TreesheetRC($c, $level, $prefix, $options, $itemReporter)
+        
     case element(z:_choice_) | element(z:_sgroup_) return
         let $occ := $n/@z:occ
         let $sgHeadSuffix := $n/@z:sgHead/concat('[', replace(., '.*:', ''), ']')

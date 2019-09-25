@@ -202,9 +202,11 @@ declare function f:lcomps2Ltree($comp as element(),
             for $elem in $comp/z:elems/z:elem
             return map:entry($elem/@z:name, $elem)
         )
+    (:
     let $DUMMY := file:write('DEBUG_COMP.xml', $comp)        
     let $DUMMY := file:write('DEBUG_ELEM_DICT.xml', 
         <elemDict>{(map:keys($elemDict) => sort()) ! <entry key="{.}">{$elemDict(.)}</entry>}</elemDict>)
+    :)        
     let $typeDict := 
         map:merge(
             for $type in $comp/z:types/z:type
