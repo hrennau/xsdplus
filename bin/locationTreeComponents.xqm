@@ -922,7 +922,7 @@ declare function f:lcomp_typePropertyItems(
     let $contentTypeVariant := $contentTypeAndVariant[2]
     
     let $stypeTree := app:stypeTreeForTypeNameOrDef($typeOrTypeName, $nsmap, $schemas)
-    let $typeDesc := if ($typeVariant eq 'sb') then string($typeName)  
+    let $typeDesc := if ($typeVariant eq 'sb') then string($nname)  
                      else $stypeTree/app:stypeTree2StypeDesc(., ())
     let $contentTypeDesc :=
         if ($typeVariant ne 'cs') then ()

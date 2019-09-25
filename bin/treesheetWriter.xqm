@@ -20,6 +20,7 @@
          <param name="namespacePrefixLength" type="xs:integer?"/>ss
          <param name="namespaceLabel" type="xs:string?"/>
          <param name="sortAtts" type="xs:boolean?" default="false"/>
+         <param name="sortElems" type="xs:boolean?" default="false"/>         
          <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>         
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
@@ -88,9 +89,24 @@ declare function f:treesheetOp($request as element())
     let $colRhs := tt:getParam($request, 'colRhs')
     let $report := tt:getParam($request, 'report')
     let $lang := tt:getParam($request, 'lang')
+    let $sortAtts := tt:getParam($request, 'sortAtts')    
+    let $sortElems := tt:getParam($request, 'sortElems')    
     let $sgroupStyle := tt:getParam($request, 'sgroupStyle')    
     let $namespacePrefixLength := tt:getParam($request, 'namespacePrefixLength')
     let $namespaceLabel := tt:getParam($request, 'namespaceLabel')
+    
+    let $options :=
+        <options withStypeTrees="false"
+                 withAnnos="true"
+                 colRhs="{$colRhs}"
+                 sgroupStyle="{$sgroupStyle}"
+                 sortAtts="{$sortAtts}"
+                 sortElems="{$sortElems}">{
+            if (empty($namespacePrefixLength)) then () else
+                attribute namespacePrefixLength {$namespacePrefixLength},
+            if (empty($namespaceLabel)) then () else
+                attribute namespaceLabel {$namespaceLabel}
+        }</options>
     
     let $itemReporter := 
         for $r in $report return
@@ -122,8 +138,9 @@ declare function f:treesheetOp($request as element())
         default return ()
     
     return
-        f:treesheet($enames, $tnames, $gnames, $ens, $tns, $gns, $global, $colRhs, 
-            $sgroupStyle, $namespacePrefixLength, $namespaceLabel, $itemReporter, $nsmap, $schemas)
+    (: removed: $colRhs, $sgroupStyle, $namespacePrefixLength, $namespaceLabel,  :)
+        f:treesheet($enames, $tnames, $gnames, $ens, $tns, $gns, $global,  
+            $itemReporter, $options, $nsmap, $schemas)
 };
 
 declare function f:reportAnno($n as node(), $options as element(options)?, $lang as xs:string?) 
@@ -178,24 +195,11 @@ declare function f:treesheet($enames as element(nameFilter)*,
                              $tns as element(nameFilter)*,
                              $gns as element(nameFilter)*,                             
                              $global as xs:boolean?,
-                             $colRhs as xs:integer?,
-                             $sgroupStyle as xs:string,
-                             $namespacePrefixLength as xs:integer?,
-                             $namespaceLabel as xs:string?,
                              $itemReporter as function(*)*,
+                             $options as element(options),
                              $nsmap as element(zz:nsMap)?,   
                              $schemas as element(xs:schema)+)
         as xs:string {
-    let $options :=
-        <options withStypeTrees="false"
-                 withAnnos="true"
-                 colRhs="{$colRhs}"
-                 sgroupStyle="{$sgroupStyle}">{
-            if (empty($namespacePrefixLength)) then () else
-                attribute namespacePrefixLength {$namespacePrefixLength},
-            if (empty($namespaceLabel)) then () else
-                attribute namespaceLabel {$namespaceLabel}
-        }</options>
     let $nsmap := if ($nsmap) then $nsmap else app:getTnsPrefixMap($schemas)
     let $ltree := app:ltree($enames, $tnames, $gnames, $ens, $tns, $gns, $global, $options, 
                             (), $nsmap, $schemas)
@@ -324,8 +328,17 @@ declare function f:ltree2TreesheetRC($n as node(),
                 tail($rhs)
             )
         let $content :=
-            for $c in $n/* return
-                f:ltree2TreesheetRC($c, $nextLevel, $nextPrefix, $options, $itemReporter)
+            let $elems :=
+                let $preliminary := $n/*
+                return
+                    if (not($options/@sortElems eq 'true')) then $preliminary
+                    else
+                        for $item in $preliminary
+                        order by local-name($item), namespace-uri($item)
+                        return $item
+            for $elem in $elems             
+            return
+                f:ltree2TreesheetRC($elem, $nextLevel, $nextPrefix, $options, $itemReporter)
         return (
             $rep,
             $content
