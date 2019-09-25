@@ -22,6 +22,7 @@
          <param name="noprefix" type="xs:boolean?" default="false"/>
          <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>         
          <param name="sortAtts" type="xs:boolean?" default="false"/>
+         <param name="sortElems" type="xs:boolean?" default="false"/>
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
          <param name="ltree" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
@@ -80,6 +81,8 @@ declare function f:vtreeOp($request as element())
     let $nsmap := app:getTnsPrefixMap($schemas)
     let $groupNorm := tt:getParam($request, 'groupNormalization')
     let $sgroupStyle := tt:getParam($request, 'sgroupStyle')    
+    let $sortAtts := tt:getParam($request, 'sortAtts')
+    let $sortElems := tt:getParam($request, 'sortElems')
     let $attRep := tt:getParam($request, 'attRep')    
     let $collapseElems := tt:getParam($request, 'collapseElems')
     
@@ -87,7 +90,9 @@ declare function f:vtreeOp($request as element())
         <options withStypeTrees="false" 
                  attRep="{$attRep}" 
                  noprefix="{$noprefix}"
-                 sgroupStyle="{$sgroupStyle}">{
+                 sgroupStyle="{$sgroupStyle}"
+                 sortAtts="{$sortAtts}"
+                 sortElems="{$sortElems}">{
             <collapseElems>{
                 $collapseElems
             }</collapseElems>                 
@@ -166,10 +171,19 @@ declare function f:ltree2VtreeRC($n as node(),
         for $c in $n/node() return f:ltree2VtreeRC($c, $options, $omap)
         
     case element(z:_sequence_) | element(z:_choice_) | element(z:_all_) return
-        element {node-name($n)} {
-            for $a in $n/@* return f:ltree2VtreeRC($a, $options, $omap),
-            for $c in $n/node() return f:ltree2VtreeRC($c, $options, $omap)
-        }
+        let $children := 
+            let $preliminary := for $c in $n/* return f:ltree2VtreeRC($c, $options, $omap)
+            return
+                if (not($options/@sortAtts eq 'true')) then $preliminary
+                else
+                    for $c in $preliminary
+                    order by local-name($c), namespace-uri($c)
+                    return $c
+        return                    
+            element {node-name($n)} {
+                for $a in $n/@* return f:ltree2VtreeRC($a, $options, $omap),
+                $children
+            }
 
     case element(z:_attributes_) return f:ltree2VtreeRC_attributes($n, $options, $omap)
     case element(z:_annotation_) return ()
@@ -200,11 +214,24 @@ declare function f:ltree2VtreeRC($n as node(),
                         for $c in $n/node() return f:ltree2VtreeRC($c, $options, $omap)
         )
         let $contentAtts := $content[self::attribute()]
+        let $contentElems := 
+            let $preliminary := $content except $contentAtts
+            return
+                if (not($options/@sortElems eq 'true')) then $preliminary
+                else
+                    let $groups := $preliminary/self::z:*
+                    let $nonGroups := 
+                        let $preliminary := $preliminary except $groups
+                        for $item in $preliminary
+                        order by local-name($item), namespace-uri($item)
+                        return $item
+                    return ($nonGroups, $groups)
+        
         return
             element {node-name($n)} {
                 $contentAtts,
                 $typeAtt,
-                $content except $contentAtts
+                $contentElems
             }
         
     case attribute(z:name) return

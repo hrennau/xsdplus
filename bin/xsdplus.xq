@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2019-08-19T13:29:42.379+02:00 
+ : @version 2019-09-25T10:05:04.024+02:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -433,6 +433,7 @@ declare variable $toolScheme :=
       <param name="noprefix" type="xs:boolean?" default="false"/>
       <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>
       <param name="sortAtts" type="xs:boolean?" default="false"/>
+      <param name="sortElems" type="xs:boolean?" default="false"/>
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
       <param name="ltree" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
