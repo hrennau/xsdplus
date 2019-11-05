@@ -857,7 +857,7 @@ declare function f:lcomp_type_annoRC(
         }</z:_appinfo_>    
     case element() return 
         element {node-name($n)}{
-            for $a in $n/node() return f:lcomp_type_annoRC($a, $options, $nsmap, $schemas),
+            for $a in $n/@* return f:lcomp_type_annoRC($a, $options, $nsmap, $schemas),
             for $c in $n/node() return f:lcomp_type_annoRC($c, $options, $nsmap, $schemas)
         }
     default return $n
