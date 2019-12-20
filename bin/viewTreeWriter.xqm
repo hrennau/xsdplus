@@ -23,6 +23,7 @@
          <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>         
          <param name="sortAtts" type="xs:boolean?" default="false"/>
          <param name="sortElems" type="xs:boolean?" default="false"/>
+         <param name="withType" type="xs:boolean?" default="false"/>
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
          <param name="ltree" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
@@ -83,6 +84,7 @@ declare function f:vtreeOp($request as element())
     let $sgroupStyle := tt:getParam($request, 'sgroupStyle')    
     let $sortAtts := tt:getParam($request, 'sortAtts')
     let $sortElems := tt:getParam($request, 'sortElems')
+    let $withType := tt:getParam($request, 'withType')
     let $attRep := tt:getParam($request, 'attRep')    
     let $collapseElems := tt:getParam($request, 'collapseElems')
     
@@ -92,7 +94,8 @@ declare function f:vtreeOp($request as element())
                  noprefix="{$noprefix}"
                  sgroupStyle="{$sgroupStyle}"
                  sortAtts="{$sortAtts}"
-                 sortElems="{$sortElems}">{
+                 sortElems="{$sortElems}"
+                 withType="{$withType}">{
             <collapseElems>{
                 $collapseElems
             }</collapseElems>                 
@@ -248,7 +251,7 @@ declare function f:ltree2VtreeRC($n as node(),
         attribute groupRecursion {$n}
 
     case attribute(z:type) return
-        if ($n = $omap?recursiveTypes and not($n/../@z:typeRecursion)) then attribute type {$n} else ()
+        if ($n = $omap?recursiveTypes and not($n/../@z:typeRecursion) or $options/@withType eq 'true') then attribute type {$n} else ()
         
     case attribute() return ()
     default return $n

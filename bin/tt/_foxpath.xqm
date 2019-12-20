@@ -42,6 +42,21 @@ declare function f:resolveFoxpath($foxpath as xs:string?,
 };
 
 (:~
+ : Resolves a foxpath expression. The result is an XDM value.
+ :
+ : @param foxpath the expression text
+ : @param options evaluation options
+ : @return the expression value, which is an XDM value
+ :)
+declare function f:resolveFoxpath($foxpath as xs:string?,
+                                  $options as map(*)?,
+                                  $context as item()?,                                  
+                                  $externalVariableBindings as map(xs:QName, item()*)?) 
+        as item()* {
+    f:resolveFoxpath($foxpath, false(), $context, (), $options, $externalVariableBindings)
+};
+
+(:~
  : Resolves a foxpath expression to a value.
  :
  : @param foxpath the text of a foxpath expression
@@ -90,6 +105,8 @@ declare function f:resolveFoxpath($foxpath as xs:string?,
  :    boolean value, rather than its value
  : @param context if specified, a file system folder used for resolving 
  :    relative path expressions; defaults to the current working directory
+ : @param options options controlling the parsing and evaluation of the foxpath expression
+ : @param externalVariableBindings a map providing the names and values of external variables
  : @return the expression value
  :)
 declare function f:resolveFoxpath($foxpath as xs:string, 
@@ -99,6 +116,7 @@ declare function f:resolveFoxpath($foxpath as xs:string,
                                   $externalVariableBindings as map(xs:QName, item()*)?)
         as item()* {
     let $DEBUG := f:trace($foxpath, 'parse.resolve_foxpath', 'INTEXT_RESOLVE_FOXPATH: ')
+    let $context := f:editInitialContext($context)
     let $tree := f:trace(i:parseFoxpath($foxpath, $options), 'parse', 'FOXPATH_ELEM: ')
     let $errors := $tree/self::errors 
     return 
@@ -668,7 +686,7 @@ declare function f:resolveFoxAxisStep($axisStep as element()+,
                     [not($regex) or matches(replace(., '.*/', ''), $regex, 'i')]            
                 return
                     if (not($predicates)) then $ctxtFiles
-                    else f:testPredicates(sort($ctxtFiles, lower-case#1), $predicates, $vars, $options)
+                    else f:testPredicates(sort($ctxtFiles, (), lower-case#1), $predicates, $vars, $options)
         else if ($axis = 'following-sibling') then
                 for $ctxt in $context
                 let $parent := (replace($ctxt, '/[^/]*$', '')[string()], '/')[1]
@@ -679,7 +697,7 @@ declare function f:resolveFoxAxisStep($axisStep as element()+,
                     ! concat($parent, '/', .)                
                 return
                     if (not($predicates)) then $followingSiblings
-                    else f:testPredicates(sort($followingSiblings, lower-case#1), $predicates, $vars, $options)
+                    else f:testPredicates(sort($followingSiblings, (), lower-case#1), $predicates, $vars, $options)
         
         (: reverse axis :)        
         else    
@@ -731,7 +749,7 @@ declare function f:resolveFoxAxisStep($axisStep as element()+,
                     ! concat($parent, '/', .)                
                 return
                     if (not($predicates)) then $precedingSiblings
-                    else f:testPredicates(reverse(sort($precedingSiblings, lower-case#1)), $predicates, $vars, $options)
+                    else f:testPredicates(reverse(sort($precedingSiblings, (), lower-case#1)), $predicates, $vars, $options)
                         
         else
             f:createFoxpathError('NOT_YET_IMPLEMENTED', 
@@ -2054,3 +2072,16 @@ declare function f:pattern2Regex($pattern as xs:string)
            replace(replace($pattern, '\.', '\\.'), '\*', '.*'), 
            '$')        
 };
+
+(:~
+ : Edits the initial context.
+ :
+ : @param context the initial context
+ : @return the edited context
+ :)
+declare function f:editInitialContext($context as item()?) as item()? {
+    if (empty($context)) then $context
+    else if ($context instance of node()) then $context
+    else $context ! file:path-to-native(.) ! replace(., '\\', '/') ! replace(., '/$', '')
+};
+
