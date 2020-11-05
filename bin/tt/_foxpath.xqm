@@ -1997,7 +1997,7 @@ declare function f:resolveFunctionCall($call as element(),
                 ($explicit, $context)[1]
         let $useOptions :=
             if ($context and $context instance of node()) then $options
-            else if ($context?IS_CONTEXT_URI) then $options
+            (: else if ($context?IS_CONTEXT_URI) then $options :)   (: 20200213 - commented out _TO_DO_ must be analyzed :)
             else
                 map:put($options, 'IS_CONTEXT_URI', true())
         return
@@ -2080,8 +2080,13 @@ declare function f:pattern2Regex($pattern as xs:string)
  : @return the edited context
  :)
 declare function f:editInitialContext($context as item()?) as item()? {
+    (: let $_DEBUG := trace($context, '___INITIAL_CONTEXT: ') return :)
     if (empty($context)) then $context
     else if ($context instance of node()) then $context
-    else $context ! file:path-to-native(.) ! replace(., '\\', '/') ! replace(., '/$', '')
+    else $context 
+         ! ( try {file:path-to-native(.)} catch * {.} ) 
+         ! replace(., '\\', '/') 
+         ! replace(., '/$', '')
 };
+
 

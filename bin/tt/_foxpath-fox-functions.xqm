@@ -34,6 +34,329 @@ declare function f:foxfunc_file-content($uri as xs:string?,
 };      
 
 (:~
+ : Returns the child URIs of a given URI, provided their name matches
+ : a given name, or a regex derived from it. If $fromSubstring and 
+ : $toSubstring are supplied, the URI names must match the regex 
+ : obtained by replacing in $name substring $fromSubstring with 
+ : $toSubstring.
+ :
+ : @param context the context URI
+ : @param names one or several name patterns
+ : @param fromSubstring used to map $name to a regex
+ : @param toSubstring used to map $name to a regex
+ : @return child URIs matching the name or the derived regex
+ :)
+declare function f:foxfunc_fox-child($context as xs:string,
+                                     $names as xs:string+,
+                                     $fromSubstring as xs:string?,
+                                     $toSubstring as xs:string?)
+        as xs:string* {
+    (
+    if (not($fromSubstring) or not($toSubstring)) then 
+        $names ! f:childUriCollection($context, ., (), ()) ! concat($context, '/', .) 
+    else 
+        for $name in $names
+        let $regex := replace($name, $fromSubstring, $toSubstring, 'i') !
+                      concat('^', ., '$')
+        return
+            for $child in f:childUriCollection($context, (), (), ())
+            let $cname := replace($child, '.*/', '')
+            where matches($cname, $regex, 'i')
+            return concat($context, '/', $child)
+    ) => distinct-values()            
+};
+
+(:~
+ : Returns the parent URIs of a given URI, provided its name matches
+ : a given name, or a regex derived from it. If $fromSubstring and 
+ : $toSubstring are supplied, the parent URI name must match the regex 
+ : obtained by replacing in $name substring $fromSubstring with 
+ : $toSubstring.
+ :
+ : @param context the context URI
+ : @param names one or several name patterns
+ : @param fromSubstring used to map $name to a regex
+ : @param toSubstring used to map $name to a regex
+ : @return the parent URI, if it matches the name or the derived regex
+ :)
+declare function f:foxfunc_fox-parent($context as xs:string,
+                                      $names as xs:string+,
+                                      $fromSubstring as xs:string?,
+                                      $toSubstring as xs:string?)
+        as xs:string? {
+    (
+    for $name in $names
+    let $regex :=
+        if (not($fromSubstring) or not($toSubstring)) then 
+            replace($name, '\*', '.*') !
+            replace(., '\?', '.') !
+            concat('^', ., '$')
+        else
+            replace($name, $fromSubstring, $toSubstring, 'i') !
+            concat('^', ., '$')
+    let $uri := f:parentUri($context, $regex) 
+    return $uri
+    ) => distinct-values()
+};
+
+(:~
+ : Returns a given URI, provided its name matches a given name, or a 
+ : regex derived from it. If $fromSubstring and $toSubstring are 
+ : supplied, the URI name must match the regex obtained by replacing 
+ : in $name substring $fromSubstring with $toSubstring.
+ :
+ : @param context the context URI
+ : @param names one or several name patterns
+ : @param fromSubstring used to map $name to a regex
+ : @param toSubstring used to map $name to a regex
+ : @return child URIs matching the name of the derived regex
+ :)
+declare function f:foxfunc_fox-self($context as xs:string,
+                                    $names as xs:string+,
+                                    $fromSubstring as xs:string?,
+                                    $toSubstring as xs:string?)
+        as xs:string? {
+    (
+    for $name in $names
+    let $regex :=
+        if (not($fromSubstring) or not($toSubstring)) then 
+            replace($name, '\*', '.*') !
+            replace(., '\?', '.') !
+            concat('^', ., '$')
+        else
+            replace($name, $fromSubstring, $toSubstring, 'i') !
+            concat('^', ., '$')
+    let $uri := f:selfUri($context, $regex) 
+    return $uri
+    ) => distinct-values()
+};
+
+(:~
+ : Returns the descendant URIs of a given URI, provided their name matches
+ : a given name, or a regex derived from it. If $fromSubstring and 
+ : $toSubstring are supplied, the URI names must match the regex 
+ : obtained by replacing in $name substring $fromSubstring with 
+ : $toSubstring.
+ :
+ : @param context the context URI
+ : @param names one or several name patterns
+ : @param fromSubstring used to map $name to a regex
+ : @param toSubstring used to map $name to a regex
+ : @return descendant URIs matching the name or the derived regex
+ :)
+declare function f:foxfunc_fox-descendant($context as xs:string,
+                                          $names as xs:string+,
+                                          $fromSubstring as xs:string?,
+                                          $toSubstring as xs:string?)
+        as xs:string* {
+    (
+    for $name in $names return
+    
+    if (not($fromSubstring) or not($toSubstring)) then 
+        f:descendantUriCollection($context, $name, (), ()) ! concat($context, '/', .) 
+    else 
+        let $regex := replace($name, $fromSubstring, $toSubstring, 'i') !
+                      concat('^', ., '$')        
+        return
+            for $child in f:descendantUriCollection($context, (), (), ())
+            let $cname := replace($child, '.*/', '')
+            where matches($cname, $regex, 'i')
+            return concat($context, '/', $child)
+    ) => distinct-values()            
+};
+
+(:~
+ : Returns the descendant-or-self URIs of a given URI, provided their name 
+ : matches a given name, or a regex derived from it. If $fromSubstring and 
+ : $toSubstring are supplied, the URI names must match the regex obtained
+ : obtained by replacing in $name substring $fromSubstring with $toSubstring.
+ :
+ : @param context the context URI
+ : @param names one or several name patterns
+ : @param fromSubstring used to map $name to a regex
+ : @param toSubstring used to map $name to a regex
+ : @return descendant-or-self URIs matching the name or the derived regex
+ :)
+declare function f:foxfunc_fox-descendant-or-self($context as xs:string,
+                                                  $names as xs:string+,
+                                                  $fromSubstring as xs:string?,
+                                                  $toSubstring as xs:string?)
+        as xs:string* {
+    (
+    for $name in $names
+    let $descendantUris := f:foxfunc_fox-descendant($context, $name, $fromSubstring, $toSubstring)
+    return (
+        f:foxfunc_fox-self($context, $name, $fromSubstring, $toSubstring),
+        $descendantUris
+    )
+    ) => distinct-values()
+};
+
+(:~
+ : Returns the sibling URIs of a given URI, provided their name matches a given 
+ : name, or a regex derived from it. If $fromSubstring and $toSubstring are 
+ : supplied, the URI names must match the regex obtained obtained by replacing 
+ : in $name substring $fromSubstring with $toSubstring.
+ :
+ : @param context the context URI
+ : @param names one or several name patterns
+ : @param fromSubstring used to map $name to a regex
+ : @param toSubstring used to map $name to a regex
+ : @return sibling URIs matching the name or the derived regex
+ :)
+declare function f:foxfunc_fox-sibling($context as xs:string,
+                                       $names as xs:string+,
+                                       $fromSubstring as xs:string?,
+                                       $toSubstring as xs:string?)
+        as xs:string* {
+    (
+    for $name in $names
+    let $parent := f:parentUri($context, ())
+    let $raw := f:foxfunc_fox-child($parent, $name, $fromSubstring, $toSubstring)
+    return $raw[not(. eq $context)]
+    ) => distinct-values()
+};
+
+(:~
+ : Returns the sibling URIs of the parent URI of a given URI, provided their 
+ ; name matches a given name, or a regex derived from it. If $fromSubstring 
+ : and $toSubstring are supplied, the URI names must match the regex obtained 
+ : obtained by replacing in $name substring $fromSubstring with $toSubstring.
+ :
+ : @param context the context URI
+ : @param names one or several name patterns
+ : @param fromSubstring used to map $name to a regex
+ : @param toSubstring used to map $name to a regex
+ : @return sibling URIs matching the name or the derived regex
+ :)
+declare function f:foxfunc_fox-parent-sibling($context as xs:string,
+                                              $names as xs:string+,
+                                              $fromSubstring as xs:string?,
+                                              $toSubstring as xs:string?)
+        as xs:string* {
+    (        
+    for $name in $names return
+        f:parentUri($context, ()) 
+        ! f:foxfunc_fox-sibling(., $name, $fromSubstring, $toSubstring)
+    ) => distinct-values()        
+};
+
+(:~
+ : Returns the ancestor URIs of a given URI, provided their name matches a given 
+ : name, or a regex derived from it. If $fromSubstring and $toSubstring are 
+ : supplied, the URI names must match the regex obtained obtained by replacing 
+ : in $name substring $fromSubstring with $toSubstring.
+ :
+ : @param context the context URI
+ : @param names one or several name patterns
+ : @param fromSubstring used to map $name to a regex
+ : @param toSubstring used to map $name to a regex
+ : @return sibling URIs matching the name or the derived regex
+ :)
+declare function f:foxfunc_fox-ancestor($context as xs:string,                                        
+                                        $names as xs:string+,
+                                        $fromSubstring as xs:string?,
+                                        $toSubstring as xs:string?)
+        as xs:string* {
+    (
+    for $name in $names
+    let $regex :=
+        if (not($fromSubstring) or not($toSubstring)) then 
+            replace($name, '\*', '.*') !
+            replace(., '\?', '.') !
+            concat('^', ., '$')
+        else
+            replace($name, $fromSubstring, $toSubstring, 'i') !
+            concat('^', ., '$')
+    let $uris := f:ancestorUriCollection($context, $regex, false()) 
+    return $uris
+    ) => distinct-values()
+};
+
+(:~
+ : Returns the ancestor-or-self URIs of a given URI, provided their name matches a 
+ : given name, or a regex derived from it. If $fromSubstring and $toSubstring are 
+ : supplied, the URI names must match the regex obtained obtained by replacing in 
+ : $name substring $fromSubstring with $toSubstring.
+ :
+ : @param context the context URI
+ : @param names one or several name patterns
+ : @param fromSubstring used to map $name to a regex
+ : @param toSubstring used to map $name to a regex
+ : @return sibling URIs matching the name or the derived regex
+ :)
+declare function f:foxfunc_fox-ancestor-or-self($context as xs:string,                                        
+                                                $names as xs:string+,
+                                                $fromSubstring as xs:string?,
+                                                $toSubstring as xs:string?)
+        as xs:string* {
+    (
+    for $name in $names
+    let $regex :=
+        if (not($fromSubstring) or not($toSubstring)) then 
+            replace($name, '\*', '.*') !
+            replace(., '\?', '.') !
+            concat('^', ., '$')
+        else
+            replace($name, $fromSubstring, $toSubstring, 'i') !
+            concat('^', ., '$')
+    let $uris := f:ancestorUriCollection($context, $regex, true()) 
+    return $uris
+    ) => distinct-values()
+};
+
+(:~
+ : Returns a frequency distribution.
+ :
+ : @param values a sequence of terms
+ : @param min if specified - return only terms with a frequency >= $min
+ : @param max if specified - return only terms with a frequency >= $max
+ : @format format the output format, one of text|xml|json|csv, default = text
+ : @format width if format = text - the width of the term column
+ : @return the frequency distribution
+ :)
+declare function f:foxfunc_frequencies($values as item()*, 
+                                       $min as xs:integer?, 
+                                       $max as xs:integer?, 
+                                       $format as xs:string?,
+                                       $width as xs:integer?)
+        as item() {
+        
+    let $format := ($format, 'text')[1]
+ 
+    (: Function item returning a text representation :)
+    let $textrep :=
+        if ($format ne 'text') then ()
+        else if (empty($width)) then function ($s, $c, $w) {concat($s, ' (', $c, ')')}
+        else function ($s, $c, $w) {concat($s, string-join(for $i in 1 to $w - string-length($s) return '.', ''), ' (', $c, ')')}
+        
+    (: Function item returning a term representation :)
+    let $item :=
+        switch($format) 
+        case 'text' return function($s, $c) {$textrep[1]($s, $c, $width[1])} 
+        case 'xml' return function($s, $c) {<term text="{$s}" count="{$c}"/>}
+        case 'json' return function($s, $c) {'"'||$s||'": '||$c}
+        case 'csv' return function($s, $c) {'"'||$s||'",'||$c}
+        default return error(QName((), 'INVALID_ARG'), concat('Unknown frequencies format, should be text|xml|json|csv; found: ', $format))
+        
+    (: Item frequencies :)        
+    let $items :=
+        for $value in $values
+        group by $s := string($value)
+        let $c := count($value)
+        where (empty($min) or $c ge $min) and (empty($max) or $c le $max)
+        order by lower-case($s)
+        return $item($s, $c)
+        
+    (: The report :)
+    return
+        switch($format)
+        case 'xml' return <terms minCount="{min($items/@count)}" maxCount="{min($items/@count)}">{$items}</terms>
+        case 'json' return ('{', $items ! concat('  ', .), '}') => string-join('&#xA;')
+        default return $items => string-join('&#xA;')
+};      
+
+(:~
  : Foxpath function `repeat#2'. Creates a string which is the concatenation of
  : a given number of instances of a given string.
  :
@@ -350,3 +673,45 @@ declare function f:foxfunc_in-scope-namespaces-descriptor($item as item())
         as xs:string+ {        
     f:foxfunc_in-scope-namespaces($item) => string-join(', ')
 };    
+
+(:~
+ : Transforms a string by reversing character replacements used by 
+ : the BaseX JSON representation (conversion format 'direct') for 
+ : representing the names of object members.
+ :
+ : @param item a string
+ : @return the result of character replacements reversed
+ :)
+declare function f:foxfunc_unescape-json-name($item as item()) as xs:string { 
+    string-join(
+        analyze-string($item, '_[0-9a-f]{4}')/*/(typeswitch(.)
+        case element(fn:match) return substring(., 2) ! concat('"\u', ., '"') ! parse-json(.)
+        default return replace(., '__', '_')), '')
+};
+
+(:~
+ : Resolves a link to a resource. If $mediatype is specified, the
+ : XML or JSON document is returned, otherwise the document text.
+ :
+ : @param node node containing the link
+ : @param mediatype mediatype expected
+ : @return the resource, either as XDM root node, or as text
+ :)
+declare function f:foxfunc_resolve-link($node as node(), $mediatype as xs:string?)
+        as item()? {
+    let $base := $node/ancestor-or-self::*[1]        
+    let $uri := 
+        if ($base) then resolve-uri($node, $base/base-uri(.))
+        else resolve-uri($node)
+    return
+        if ($mediatype eq 'xml') then
+            if (doc-available($uri)) then doc($uri)
+            else ()
+        else if (not(unparsed-text-available($uri))) then ()
+        else
+            let $text := unparsed-text($uri)
+            return
+                if ($mediatype eq 'json') then try {json:parse($text)} catch * {()}
+                else $text
+};            
+

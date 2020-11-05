@@ -148,7 +148,7 @@ declare function f:ltree2VtreeRC($n as node(),
     typeswitch($n)
     
     case element(z:locationTrees) return
-        <z:trees>{
+        <z:trees xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:zz="http://www.ttools.org/structure">{
             for $a in $n/@* return f:ltree2VtreeRC($a, $options, $omap),
             for $c in $n/node() return f:ltree2VtreeRC($c, $options, $omap)
         }</z:trees>

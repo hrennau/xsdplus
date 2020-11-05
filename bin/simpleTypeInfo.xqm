@@ -621,6 +621,7 @@ declare function f:castToComparable($s as xs:string?)
     else if ($s castable as xs:dateTime) then xs:dateTime($s) 
     else if ($s castable as xs:time) then xs:time($s)      
     else if ($s castable as xs:double) then number($s)
+    else if ($s castable as xs:decimal) then number($s)
     else $s    
 };
 

@@ -26,6 +26,7 @@
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
          <param name="colRhs" type="xs:integer" default="60"/>
          <param name="report" type="xs:string*" fct_values="anno, tdesc, tname, stname, ctname"/>
+         <param name="noLabel" type="xs:boolean?"/>
          <param name="lang" type="xs:string?"/>
          <pgroup name="in" minOccurs="1"/>    
          <pgroup name="comps" maxOccurs="1"/>         
@@ -94,14 +95,16 @@ declare function f:treesheetOp($request as element())
     let $sgroupStyle := tt:getParam($request, 'sgroupStyle')    
     let $namespacePrefixLength := tt:getParam($request, 'namespacePrefixLength')
     let $namespaceLabel := tt:getParam($request, 'namespaceLabel')
+    let $noLabel := tt:getParam($request, 'noLabel')
     
     let $options :=
         <options withStypeTrees="false"
-                 withAnnos="true"
+                 withAnnos="{$report = 'anno'}"
                  colRhs="{$colRhs}"
                  sgroupStyle="{$sgroupStyle}"
                  sortAtts="{$sortAtts}"
-                 sortElems="{$sortElems}">{
+                 sortElems="{$sortElems}"
+                 noLabel="{$noLabel}">{
             if (empty($namespacePrefixLength)) then () else
                 attribute namespacePrefixLength {$namespacePrefixLength},
             if (empty($namespaceLabel)) then () else
@@ -117,23 +120,23 @@ declare function f:treesheetOp($request as element())
                 {
                     if ($n/(self::z:_anyAttribute_)) then ()
                     else if (not($n/@z:type)) then
-                        if ($n/@z:abstract) then 'ty: (abstract)'
+                        if ($n/@z:abstract) then 'ty: '[not($options/@noLabel eq 'true')] || '(abstract)'
                         else 'tdesc: (no type)'
-                    else $n/(@z:typeDesc, @z:contentTypeDesc)[1] ! ('ty: ' || .)
+                    else $n/(@z:typeDesc, @z:contentTypeDesc)[1] ! ('ty: '[not($options/@noLabel eq 'true')] || .)
                 }
         case('anno') return f:reportAnno(?, ?, $lang)
         case('tname') return
             function($n, $options) 
-                {$n/@z:type ! ('tname: ' || .)}
+                {$n/@z:type ! ('tname: '[not($options/@noLabel eq 'true')] || .)}
         case('stname') return
             function($n, $options) {
                  if ($n/@z:typeVariant eq 'cc') then ()
-                 else $n/@z:type ! ('tname: ' || .)
+                 else $n/@z:type ! ('tname: '[not($options/@noLabel eq 'true')] || .)
             }
         case('ctname') return
             function($n, $options) {
                  if (not($n/@z:typeVariant eq 'cc')) then ()
-                 else $n/@z:type ! ('tname: ' || .)
+                 else $n/@z:type ! ('tname: '[not($options/@noLabel eq 'true')] || .)
             }
         default return ()
     
@@ -279,7 +282,7 @@ declare function f:ltree2TreesheetRC($n as node(),
             f:ltree2TreesheetRC($c, $level, $prefix, $options, $itemReporter)
     
     case element(z:_any_) return
-        let $occ := trace( $n/@z:occ , 'OCC: ')
+        let $occ := $n/@z:occ
         let $occSuffix :=
             if (matches($occ, '\d')) then concat('{', $occ, '}') else $occ
         let $useName := '_any_' || $occSuffix    
