@@ -177,6 +177,7 @@ declare function f:lcomps($comps as element()+,
     let $sgroupStyle := $options/@sgroupStyle/string()        
     let $report :=
         for $comp in $comps
+        let $annotations := $comp/xs:annotation/f:lcomp_type_anno(., $options, $nsmap, $schemas)
         let $name := $comp/@name
         let $loc := app:getComponentLocator($comp, $nsmap, $schemas)
         let $namespace := $comp/ancestor::xs:schema/@targetNamespace  
@@ -321,6 +322,7 @@ declare function f:lcomps($comps as element()+,
                 attribute z:loc {$loc},
                 $elemType,
                 $elemTypeLoc,
+                $annotations,
                 <z:types count="{count($typeNames)}">{$expandedTypes}</z:types>,
                 <z:groups count="{count($groupNames)}">{$fullyExpandedGroups}</z:groups>,                
                 <z:elems count="{count($elemComponents)}">{$elemComponents}</z:elems>
@@ -551,7 +553,8 @@ declare function f:lcomp_type_elems($type as element(),
                                     $nsmap as element(),
                                     $schemas as element(xs:schema)+)
         as node()* {
-    $type/*/f:lcomp_type_elemsRC(., $options, $nsmap, $schemas)        
+    (: hjr 20210206 - exclude annotations :)        
+    $type/(* except xs:annotation)/f:lcomp_type_elemsRC(., $options, $nsmap, $schemas)        
 };        
 
 (:~
@@ -841,6 +844,7 @@ declare function f:lcomp_type_annoRC(
     typeswitch($n)
     case element(xs:annotation) return 
         <z:_annotation_>{
+            $n/parent::*/local-name(.) ! attribute z:annoParentName {.},
             $n/@*,
             for $c in $n/node() return f:lcomp_type_annoRC($c, $options, $nsmap, $schemas)
         }</z:_annotation_>    

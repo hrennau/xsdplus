@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2020-11-05T10:49:09.096+01:00 
+ : @version 2021-02-06T17:22:30.418+01:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -385,7 +385,7 @@ declare variable $toolScheme :=
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
       <param name="colRhs" type="xs:integer" default="60"/>
-      <param name="report" type="xs:string*" fct_values="anno, tdesc, tname, stname, ctname"/>
+      <param name="report" type="xs:string*" fct_values="anno, tdesc, tname, stname, ctname, sapiadoc"/>
       <param name="noLabel" type="xs:boolean?"/>
       <param name="lang" type="xs:string?"/>
       <pgroup name="in" minOccurs="1"/>

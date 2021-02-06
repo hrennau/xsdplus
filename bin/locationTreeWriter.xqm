@@ -256,6 +256,7 @@ declare function f:lcomps2LtreeRC($n as node(),
                                   $nsmap as element(zz:nsMap),
                                   $visited as element()*)
         as node()* {
+    (: let $_DEBUG := trace(concat('node kind: ', name($n), '; atts: ', $n/@*/concat(name(), ':', .) => string-join(', ')), '___INFO: ') :)        
     let $DUMMY :=
         if (count($visited) ne count($visited/.)) then ()
             (: trace((),
@@ -282,11 +283,18 @@ declare function f:lcomps2LtreeRC($n as node(),
             $type/z:typeContent/@*,        
             for $c in $type/z:typeContent/* return f:lcomps2LtreeRC(
                 $c, $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, $type)
-        )        
+        )  
+        (: hjr, 20210206: added annotations :)
+        let $typeContent_atts := $typeContent[. instance of attribute()]
+        let $typeContent_children := $typeContent except $typeContent_atts        
+        let $annotations := 
+            $comp/z:_annotation_/f:lcomps2LtreeRC(., $elemDict, $typeDict, $groupDict, $sgroups, $options, $nsmap, ())
         return
             element {$compName} {
                 attribute z:name {$compName},
-                $typeContent
+                $typeContent_atts,
+                $annotations,
+                $typeContent_children
             }
             
     (: element represents a TYPE component to be translated into a location tree :)            
@@ -465,7 +473,7 @@ declare function f:lcomps2LtreeRC($n as node(),
         else
             let $content :=
                 (: case 2a: element with global type reference :)
-                if ($n/@z:type ne 'z:_LOCAL_') then                    
+                if ($n/@z:type ne 'z:_LOCAL_') then  
                     let $supplementaryContent := $n/*   (: z:_annotation_, z:_stypeTree_ :)            
                     let $type := $typeDict($n/@z:type)
                     return
@@ -486,6 +494,16 @@ declare function f:lcomps2LtreeRC($n as node(),
                             let $otherZAtts := $allAtts[namespace-uri(.) eq $c:URI_LTREE] 
                                                except ($mainAtts, $locAtt)
                             let $nonZAtts := $allAtts[not(namespace-uri(.) eq $c:URI_LTREE)]
+                            (: hjr, 20210206 - remove later
+                            let $_DEBUG :=
+                                let $doc := <DEBUG elemName="{$n/name()}">{
+                                    <type>{$type}</type>,
+                                    <suppContent>{$supplementaryContent}</suppContent>, 
+                                    <contentElems>{$contentElems}</contentElems>
+                                }</DEBUG>
+                                return
+                                    file:write('DEBUG_LTREE-'|| $n/@z:type/replace(., '^.+:', '')||'.xml', $doc)
+                            :)                                   
                             return (
                                 $mainAtts, $otherZAtts, $locAtt, $nonZAtts,
                                 $supplementaryContent,                            
