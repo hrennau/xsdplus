@@ -24,6 +24,7 @@
          <param name="sortAtts" type="xs:boolean?" default="false"/>
          <param name="sortElems" type="xs:boolean?" default="false"/>
          <param name="withType" type="xs:boolean?" default="false"/>
+         <param name="withTdesc" type="xs:boolean?" default="false"/>
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
          <param name="ltree" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
@@ -85,17 +86,20 @@ declare function f:vtreeOp($request as element())
     let $sortAtts := tt:getParam($request, 'sortAtts')
     let $sortElems := tt:getParam($request, 'sortElems')
     let $withType := tt:getParam($request, 'withType')
+    let $withTdesc := tt:getParam($request, 'withTdesc')
     let $attRep := tt:getParam($request, 'attRep')    
     let $collapseElems := tt:getParam($request, 'collapseElems')
     
+    let $withStypeTree := if ($withTdesc) then 'true' else 'false'
     let $options :=
-        <options withStypeTrees="false" 
+        <options withStypeTrees="{$withStypeTree}" 
                  attRep="{$attRep}" 
                  noprefix="{$noprefix}"
                  sgroupStyle="{$sgroupStyle}"
                  sortAtts="{$sortAtts}"
                  sortElems="{$sortElems}"
-                 withType="{$withType}">{
+                 withType="{$withType}"
+                 withTdesc="{$withTdesc}">{
             <collapseElems>{
                 $collapseElems
             }</collapseElems>                 
@@ -194,6 +198,18 @@ declare function f:ltree2VtreeRC($n as node(),
     
     case element() return
         let $typeAtt := $n/@z:type/f:ltree2VtreeRC(., $options, $omap)
+        
+        let $tdescAtt :=
+            if (not($options/@withTdesc eq 'true')) then ()
+            else
+                let $value :=
+                    if ($n/self::z:*) then ()
+                    else if (not($n/@z:type)) then
+                        if ($n/@z:abstract) then '(abstract)'
+                        else '(no type)'
+                    else $n/(@z:typeDesc, @z:contentTypeDesc)[1]
+                return $value ! attribute tdesc {.}                    
+            
         let $content := (
             for $a in $n/(@* except @z:type) return f:ltree2VtreeRC($a, $options, $omap),
             if ($n/z:_groupContent_/@z:groupRecursion) then (
@@ -234,6 +250,7 @@ declare function f:ltree2VtreeRC($n as node(),
             element {node-name($n)} {
                 $contentAtts,
                 $typeAtt,
+                $tdescAtt,                
                 $contentElems
             }
         

@@ -571,19 +571,19 @@ declare function f:getRestrictionInfo
       if ((exists($minInclusive) or exists($minExclusive)) and
           (exists($maxInclusive) or exists($maxExclusive)))
       then
-         let $lhs := if (exists($minInclusive) and not($minInclusive lt $minExclusive))
+         let $lhs := if (exists($minInclusive) and not($minInclusive < $minExclusive))
                         then concat('[', $minInclusive)
                      else concat('(', $minExclusive)
-         let $rhs := if (exists($maxInclusive) and not($maxInclusive gt $maxExclusive))
+         let $rhs := if (exists($maxInclusive) and not($maxInclusive > $maxExclusive))
                         then concat($maxInclusive, ']')
                      else concat($maxExclusive, ')')
          return concat('range=', $lhs, ',', $rhs)
       else if (exists($minInclusive) or exists($minExclusive)) then
-         if (exists($minInclusive) and not($minInclusive lt $minExclusive))
+         if (exists($minInclusive) and not($minInclusive < $minExclusive))
             then concat('value>=', $minInclusive)
          else concat('value>', $minExclusive)
       else if (exists($maxInclusive) or exists($maxExclusive)) then
-         if (exists($maxInclusive) and not($maxInclusive gt $maxExclusive))
+         if (exists($maxInclusive) and not($maxInclusive > $maxExclusive))
             then concat('value<=', $maxInclusive)
          else concat('value<', $maxExclusive)
       else ()
@@ -622,7 +622,8 @@ declare function f:castToComparable($s as xs:string?)
     else if ($s castable as xs:time) then xs:time($s)      
     else if ($s castable as xs:double) then number($s)
     else if ($s castable as xs:decimal) then number($s)
-    else $s    
+    else if ($s castable as xs:boolean) then xs:boolean($s) ! number(.)
+    else xs:untypedAtomic($s)    
 };
 
 (:~
