@@ -557,8 +557,8 @@ declare function f:getRestrictionInfo
 
    let $minInclusive := max($restrictions/z:_minInclusive_/@value/f:castToComparable(.))
    let $minExclusive := max($restrictions/z:_minExclusive_/@value/f:castToComparable(.))
-   let $maxInclusive := max($restrictions/z:_maxInclusive_/@value/f:castToComparable(.))
-   let $maxExclusive := max($restrictions/z:_maxExclusive_/@value/f:castToComparable(.))
+   let $maxInclusive := min($restrictions/z:_maxInclusive_/@value/f:castToComparable(.))
+   let $maxExclusive := min($restrictions/z:_maxExclusive_/@value/f:castToComparable(.))
 
    let $totalDigits := $restrictions/z:_totalDigits_/@value/xs:int(.)
    let $totalDigits := if (not(exists($totalDigits))) then () 
