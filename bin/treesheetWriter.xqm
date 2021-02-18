@@ -25,7 +25,7 @@
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
          <param name="colRhs" type="xs:integer" default="60"/>
-         <param name="report" type="xs:string*" fct_values="anno, tdesc, tname, stname, ctname, sapiadoc"/>
+         <param name="report" type="xs:string*" fct_values="anno, tdesc, type, stype, ctype, sapiadoc, sapiadoc0, sapiadoc2"/>
          <param name="noLabel" type="xs:boolean?"/>
          <param name="lang" type="xs:string?"/>
          <pgroup name="in" minOccurs="1"/>    
@@ -35,17 +35,20 @@
 :)  
 
 module namespace f="http://www.xsdplus.org/ns/xquery-functions";
-import module namespace tt="http://www.ttools.org/xquery-functions" at 
-    "tt/_request.xqm",
-    "tt/_reportAssistent.xqm",
-    "tt/_errorAssistent.xqm",
-    "tt/_log.xqm",
-    "tt/_nameFilter.xqm",
-    "tt/_pcollection.xqm";
+import module namespace tt="http://www.ttools.org/xquery-functions" 
+at "tt/_request.xqm",
+   "tt/_reportAssistent.xqm",
+   "tt/_errorAssistent.xqm",
+   "tt/_log.xqm",
+   "tt/_nameFilter.xqm",
+   "tt/_pcollection.xqm";
     
-import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at 
-    "locationTreeComponents.xqm",
-    "occUtilities.xqm";
+import module namespace app="http://www.xsdplus.org/ns/xquery-functions" 
+at "locationTreeComponents.xqm",
+   "occUtilities.xqm";
+   
+import module namespace anno="http://www.xsdplus.org/ns/xquery-functions/anno"
+at "annotationUtilities.xqm";
     
 declare namespace z="http://www.xsdplus.org/ns/structure";
 declare namespace zz="http://www.ttools.org/structure";
@@ -99,7 +102,7 @@ declare function f:treesheetOp($request as element())
     
     let $options :=
         <options withStypeTrees="false"
-                 withAnnos="{$report = ('anno', 'sapiadoc')}"
+                 withAnnos="{$report = ('anno', 'sapiadoc', 'sapiadoc0', 'sapiadoc2')}"
                  colRhs="{$colRhs}"
                  sgroupStyle="{$sgroupStyle}"
                  sortAtts="{$sortAtts}"
@@ -124,20 +127,22 @@ declare function f:treesheetOp($request as element())
                         else 'tdesc: (no type)'
                     else $n/(@z:typeDesc, @z:contentTypeDesc)[1] ! ('ty: '[not($options/@noLabel eq 'true')] || .)
                 }
-        case('anno') return f:reportAnno(?, ?, $lang)
-        case('sapiadoc') return f:reportSapIaDoc(?, ?, $lang)
-        case('tname') return
+        case('anno') return anno:reportAnno(?, ?, $lang) ! ('anno: ' || .)
+        case('sapiadoc') return anno:reportSapIaDoc(?, 'sapiadoc', ?, $lang)
+        case('sapiadoc0') return anno:reportSapIaDoc(?, 'sapiadoc0', ?, $lang)
+        case('sapiadoc2') return anno:reportSapIaDoc(?, 'sapiadoc2', ?, $lang)        
+        case('type') return
             function($n, $options) 
-                {$n/@z:type ! ('tname: '[not($options/@noLabel eq 'true')] || .)}
-        case('stname') return
+                {$n/@z:type ! ('type: '[not($options/@noLabel eq 'true')] || .)}
+        case('stype') return
             function($n, $options) {
                  if ($n/@z:typeVariant eq 'cc') then ()
-                 else $n/@z:type ! ('tname: '[not($options/@noLabel eq 'true')] || .)
+                 else $n/@z:type ! ('stype: '[not($options/@noLabel eq 'true')] || .)
             }
-        case('ctname') return
+        case('ctype') return
             function($n, $options) {
                  if (not($n/@z:typeVariant eq 'cc')) then ()
-                 else $n/@z:type ! ('tname: '[not($options/@noLabel eq 'true')] || .)
+                 else $n/@z:type ! ('ctype: '[not($options/@noLabel eq 'true')] || .)
             }
         default return ()
     
@@ -145,77 +150,6 @@ declare function f:treesheetOp($request as element())
     (: removed: $colRhs, $sgroupStyle, $namespacePrefixLength, $namespaceLabel,  :)
         f:treesheet($enames, $tnames, $gnames, $ens, $tns, $gns, $global,  
             $itemReporter, $options, $nsmap, $schemas)
-};
-
-declare function f:reportAnno($n as node(), $options as element(options)?, $lang as xs:string?) 
-        as xs:string* {
-    let $docums := $n/z:_annotation_/z:_documentation_
-    let $docum :=
-        if (count($docums) le 1) then $docums
-        else 
-            let $try := $docums[@xml:lang eq $lang]
-            return
-                if ($try) then $try
-                else
-                    let $try := 
-                        if ($lang eq 'en') then () else $docums[@xml:lang eq 'en']
-                    return
-                        if ($try) then $try
-                        else
-                            let $try := $docums[not(@xml:lang)]
-                            return
-                                if ($try) then $try
-                                else
-                                    let $langs := distinct-values($docums/@xml:lang) => sort()
-                                    return
-                                        $docums[@xml:lang eq $langs[1]]
-    return 
-        if (not($docum)) then () else 'anno: ' || string-join($docum, ' ### ') ! normalize-space(.)
-};
-
-declare function f:reportSapIaDoc($n as node(), $options as element(options)?, $lang as xs:string?) 
-        as xs:string* {
-        
-    let $docums := $n/z:_annotation_/z:_documentation_
-    
-    (: Exclude MessageName and MessageDefinition, if there is Name and Definition, repectively :)
-    let $sources := $docums/@source
-    let $excluded := (
-        $docums[@source eq 'MessageName'][$sources = 'Name'],
-        $docums[@source eq 'MessageDefinition'][$sources = 'Definition']
-    )
-    let $docums := $docums except $excluded        
-    return if (not($docums)) then () else
-    
-    let $documsAug :=
-        for $docum in $docums
-        let $labelPrefix :=
-            let $pname := $docum/parent::z:_annotation_/@z:annoParentName
-            return
-                switch($pname)
-                case 'element' return ()
-                case 'attribute' return ()
-                case 'complexType' return 'ty'
-                case 'simpleType' return 'ty'
-                default return $pname 
-        let $source := $docum/@source
-        (: The label indicates the kind of annotation - nm, def, example, techinfo, ... :) 
-        let $label :=
-            switch($source)
-            case 'Name' return 'nm'
-            case 'Definition' return 'def'
-            case 'Note' return 
-                let $category := $docum/@*:category
-                return
-                    switch($category)
-                    case 'Technical Information' return 'techinfo'
-                    default return lower-case($category)
-            default return 'etc'                   
-        let $label := '#' || string-join(($labelPrefix, $label), '-')            
-        return
-            string-join(($label, $docum/normalize-space(.)), ': ')
-    return
-        string-join($documsAug, ' ')
 };
 
 (:~

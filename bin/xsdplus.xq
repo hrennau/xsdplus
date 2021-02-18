@@ -1,7 +1,7 @@
 (:
  : xsdplus - 
  :
- : @version 2021-02-16T18:41:33.799+01:00 
+ : @version 2021-02-18T20:05:40.002+01:00 
  :)
 
 import module namespace tt="http://www.ttools.org/xquery-functions" at
@@ -385,7 +385,7 @@ declare variable $toolScheme :=
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
       <param name="colRhs" type="xs:integer" default="60"/>
-      <param name="report" type="xs:string*" fct_values="anno, tdesc, tname, stname, ctname, sapiadoc"/>
+      <param name="report" type="xs:string*" fct_values="anno, tdesc, type, stype, ctype, sapiadoc, sapiadoc0, sapiadoc2"/>
       <param name="noLabel" type="xs:boolean?"/>
       <param name="lang" type="xs:string?"/>
       <pgroup name="in" minOccurs="1"/>
@@ -436,8 +436,7 @@ declare variable $toolScheme :=
       <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>
       <param name="sortAtts" type="xs:boolean?" default="false"/>
       <param name="sortElems" type="xs:boolean?" default="false"/>
-      <param name="withType" type="xs:boolean?" default="false"/>
-      <param name="withTdesc" type="xs:boolean?" default="false"/>
+      <param name="report" type="xs:string*" fct_values="anno, tdesc, type, stype, ctype, sapiadoc, sapiadoc0, sapiadoc2"/>
       <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
       <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
       <param name="ltree" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>

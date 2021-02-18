@@ -23,8 +23,7 @@
          <param name="sgroupStyle" type="xs:string?" default="ignore" fct_values="expand, compact, ignore"/>         
          <param name="sortAtts" type="xs:boolean?" default="false"/>
          <param name="sortElems" type="xs:boolean?" default="false"/>
-         <param name="withType" type="xs:boolean?" default="false"/>
-         <param name="withTdesc" type="xs:boolean?" default="false"/>
+         <param name="report" type="xs:string*" fct_values="anno, tdesc, type, stype, ctype, sapiadoc, sapiadoc0, sapiadoc2"/>
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
          <param name="ltree" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
@@ -35,18 +34,21 @@
 :)  
 
 module namespace f="http://www.xsdplus.org/ns/xquery-functions";
-import module namespace tt="http://www.ttools.org/xquery-functions" at 
-    "tt/_request.xqm",
-    "tt/_reportAssistent.xqm",
-    "tt/_errorAssistent.xqm",
-    "tt/_log.xqm",
-    "tt/_nameFilter.xqm",
-    "tt/_pcollection.xqm";
+import module namespace tt="http://www.ttools.org/xquery-functions" 
+at "tt/_request.xqm",
+   "tt/_reportAssistent.xqm",
+   "tt/_errorAssistent.xqm",
+   "tt/_log.xqm",
+   "tt/_nameFilter.xqm",
+   "tt/_pcollection.xqm";
     
-import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at 
-    "constants.xqm",
-    "locationTreeComponents.xqm",
-    "occUtilities.xqm";
+import module namespace app="http://www.xsdplus.org/ns/xquery-functions" 
+at "constants.xqm",
+   "locationTreeComponents.xqm",
+   "occUtilities.xqm";
+    
+import module namespace anno="http://www.xsdplus.org/ns/xquery-functions/anno"
+at "annotationUtilities.xqm";
     
 declare namespace z="http://www.xsdplus.org/ns/structure";
 declare namespace zz="http://www.ttools.org/structure";
@@ -85,21 +87,21 @@ declare function f:vtreeOp($request as element())
     let $sgroupStyle := tt:getParam($request, 'sgroupStyle')    
     let $sortAtts := tt:getParam($request, 'sortAtts')
     let $sortElems := tt:getParam($request, 'sortElems')
-    let $withType := tt:getParam($request, 'withType')
-    let $withTdesc := tt:getParam($request, 'withTdesc')
+    let $report := tt:getParam($request, 'report')
     let $attRep := tt:getParam($request, 'attRep')    
     let $collapseElems := tt:getParam($request, 'collapseElems')
     
-    let $withStypeTree := if ($withTdesc) then 'true' else 'false'
+    let $withStypeTree := trace(if ($report = 'tdesc') then 'true' else 'false' , '___WITH_STYPETREE: ')
+    let $withAnnos := trace(if ($report = ('anno', 'sapiadoc', 'sapiadoc0', 'sapiadoc2')) then 'true' else 'false' , '___WITH ANNOS: ')
     let $options :=
         <options withStypeTrees="{$withStypeTree}" 
+                 withAnnos="{$withAnnos}"        
                  attRep="{$attRep}" 
                  noprefix="{$noprefix}"
                  sgroupStyle="{$sgroupStyle}"
                  sortAtts="{$sortAtts}"
                  sortElems="{$sortElems}"
-                 withType="{$withType}"
-                 withTdesc="{$withTdesc}">{
+                 report="{$report}">{
             <collapseElems>{
                 $collapseElems
             }</collapseElems>                 
@@ -149,6 +151,8 @@ declare function f:ltree2VtreeRC($n as node(),
                                  $options as element(options),
                                  $omap as map(*))
         as node()* {
+    let $report := $options/@report/tokenize(.) return
+    
     typeswitch($n)
     
     case element(z:locationTrees) return
@@ -200,7 +204,7 @@ declare function f:ltree2VtreeRC($n as node(),
         let $typeAtt := $n/@z:type/f:ltree2VtreeRC(., $options, $omap)
         
         let $tdescAtt :=
-            if (not($options/@withTdesc eq 'true')) then ()
+            if (not($report = 'tdesc')) then ()
             else
                 let $value :=
                     if ($n/self::z:*) then ()
@@ -209,6 +213,18 @@ declare function f:ltree2VtreeRC($n as node(),
                         else '(no type)'
                     else $n/(@z:typeDesc, @z:contentTypeDesc)[1]
                 return $value ! attribute tdesc {.}                    
+          
+        let $sapiadocAtt :=
+            if (not($report = 'sapiadoc')) then () else anno:reportSapIaDoc($n, 'sapiadoc', $options, ()) ! attribute sapia {.}
+            
+        let $sapiadoc0Att :=
+            if (not($report = 'sapiadoc0')) then () else anno:reportSapIaDoc($n, 'sapiadoc0', $options, ()) ! attribute sapia {.}
+            
+        let $sapiadoc2Att :=
+            if (not($report = 'sapiadoc2')) then () else anno:reportSapIaDoc($n, 'sapiadoc2', $options, ()) ! attribute sapia {.}
+            
+        let $annoAtt := 
+            if (not($report = 'anno')) then () else anno:reportAnno($n, $options, ()) ! attribute anno {.}
             
         let $content := (
             for $a in $n/(@* except @z:type) return f:ltree2VtreeRC($a, $options, $omap),
@@ -250,7 +266,11 @@ declare function f:ltree2VtreeRC($n as node(),
             element {node-name($n)} {
                 $contentAtts,
                 $typeAtt,
-                $tdescAtt,                
+                $tdescAtt,    
+                $annoAtt,
+                $sapiadoc0Att,
+                $sapiadocAtt,
+                $sapiadoc2Att,
                 $contentElems
             }
         
@@ -268,11 +288,15 @@ declare function f:ltree2VtreeRC($n as node(),
         attribute groupRecursion {$n}
 
     case attribute(z:type) return
-        if ($n = $omap?recursiveTypes and not($n/../@z:typeRecursion) or $options/@withType eq 'true') then attribute type {$n} else ()
+        if ($n = $omap?recursiveTypes and not($n/../@z:typeRecursion) 
+            or $options/@report/tokenize(.) = 'type'
+            or $options/@report/tokenize(.) = 'stype' and not($n/../(z:_attributes_ or (* except z:*))) 
+            or $options/@report/tokenize(.) = 'ctype' and $n/../(z:_attributes_ or (* except z:*)))            
+        then attribute type {$n} 
+        else ()
         
     case attribute() return ()
     default return $n
-
 };
 
 (:~
