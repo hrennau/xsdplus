@@ -215,13 +215,13 @@ declare function f:ltree2VtreeRC($n as node(),
                 return $value ! attribute tdesc {.}                    
           
         let $sapiadocAtt :=
-            if (not($report = 'sapiadoc')) then () else anno:reportSapIaDoc($n, 'sapiadoc', $options, ()) ! attribute sapia {.}
+            if (not($report = 'sapiadoc')) then () else anno:reportSapIaDoc($n, 'sapiadoc', $options, ()) ! attribute sapiadoc {.}
             
         let $sapiadoc0Att :=
-            if (not($report = 'sapiadoc0')) then () else anno:reportSapIaDoc($n, 'sapiadoc0', $options, ()) ! attribute sapia {.}
+            if (not($report = 'sapiadoc0')) then () else anno:reportSapIaDoc($n, 'sapiadoc0', $options, ()) ! attribute sapiadoc0 {.}
             
         let $sapiadoc2Att :=
-            if (not($report = 'sapiadoc2')) then () else anno:reportSapIaDoc($n, 'sapiadoc2', $options, ()) ! attribute sapia {.}
+            if (not($report = 'sapiadoc2')) then () else anno:reportSapIaDoc($n, 'sapiadoc2', $options, ()) ! attribute sapiadoc2 {.}
             
         let $annoAtt := 
             if (not($report = 'anno')) then () else anno:reportAnno($n, $options, ()) ! attribute anno {.}
