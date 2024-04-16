@@ -31,7 +31,8 @@
 
 module namespace f="http://www.xsdplus.org/ns/xquery-functions";
 
-import module namespace tt="http://www.ttools.org/xquery-functions" at 
+import module namespace tt="http://www.ttools.org/xquery-functions" 
+at 
     "tt/_request.xqm",
     "tt/_reportAssistent.xqm",
     "tt/_errorAssistent.xqm",
@@ -39,7 +40,8 @@ import module namespace tt="http://www.ttools.org/xquery-functions" at
     "tt/_nameFilter.xqm",
     "tt/_pcollection.xqm";
     
-import module namespace app="http://www.xsdplus.org/ns/xquery-functions" at 
+import module namespace app="http://www.xsdplus.org/ns/xquery-functions" 
+at 
     "baseTypeFinder.xqm",
     "componentDependencies.xqm",
     "componentFinder.xqm",
@@ -99,6 +101,7 @@ declare function f:lcompsOp($request as element())
     return
         f:lcomps($enames, $tnames, $gnames, $ens, $tns, $gns, $global, $options, 
             $expandBaseType, $expandGroups, $nsmap, $schemas)
+        ! f:prettyNode(.)
 };     
 
 (:
@@ -145,9 +148,9 @@ declare function f:lcomps($enames as element(nameFilter)*,
                           $nsmap as element(),
                           $schemas as element(xs:schema)+)
         as element() {
-    let $comps := f:getComponents($enames, $tnames, $gnames, (), $ens, $tns, $gns, (), $global, $schemas)
-    return
-        f:lcomps($comps, $options, $expandBaseType, $expandGroups, $nsmap, $schemas)
+    f:getComponents($enames, $tnames, $gnames, (), $ens, $tns, $gns, (), $global, $schemas)
+    =>
+    f:lcomps($options, $expandBaseType, $expandGroups, $nsmap, $schemas)
 };     
 
 (:~
@@ -418,11 +421,13 @@ declare function f:lcomp_anomType($type as element(),
  : @return a 'z:typeContent' element representing the information content 
  :     of the type definition
  :)
-declare function f:lcomp_typeContent($type as element(), 
+declare function f:lcomp_typeContent($type as element()?, 
                                      $options as element(options),
                                      $nsmap as element(),
                                      $schemas as element(xs:schema)+)
         as element(z:typeContent) {
+    if (not($type)) then <z:typeContent error="TYPE_DEF_NOT_FOUND"/> else 
+    
     let $withStypeTrees := $options/@withStypeTrees/xs:boolean(.)
     let $typePropertyItems := f:lcomp_typePropertyItems($type, $withStypeTrees, $nsmap, $schemas)
     let $typePropertyAtts := $typePropertyItems[self::attribute()]
@@ -624,73 +629,6 @@ declare function f:lcomp_type_elemsRC($n as node(),
     (: an element declaration :)
     case element(xs:element) return
         f:lcomp_elem($n, $options, $nsmap, $schemas)
-(:    
-        let $name := app:getNormalizedComponentName($n, $nsmap)
-        let $loc := app:getComponentLocator($n, $nsmap, $schemas)
-        let $elemD := 
-            if ($n/@ref) then app:rfindElem($n/@ref, $schemas)
-            else $n
-        let $anomType := $elemD/(xs:simpleType, xs:complexType)
-        let $typeName := 
-            if ($anomType) then () else $elemD/@type/resolve-QName(., ..)        
-        let $anno := ($n/xs:annotation, ($elemD except $n)/xs:annotation)
-        
-        (: type anonymous or builtin: preserve all type property atts; 
-           otherwise, keep only @z:type :)
-        let $typePropertyItems :=           
-            if ($anomType) then 
-                $anomType/f:lcomp_typePropertyItems(., (), $nsmap, $schemas)
-            else if (namespace-uri-from-QName($typeName) eq $c:URI_XSD) then 
-                f:lcomp_typePropertyItems($typeName, (), $nsmap, $schemas)
-            else f:getTypeAtt($elemD, $nsmap)
-        let $typePropertyAtts := $typePropertyItems[self::attribute()]
-        let $typePropertyElems := $typePropertyItems[self::element()]
-        
-        (: info atts :)
-        let $infoAtts := 
-            let $nameAtt := attribute z:name {$name}
-            let $occAtt := app:getOccAtt($n)  
-            let $abstractAtt :=
-                if (($n, $elemD)/@abstract eq 'true') then 
-                    attribute z:abstract {'true'}
-                else ()
-            let $isGlobalAtt := if ($n is $elemD) then () else attribute z:isGlobal {'true'}                
-            let $locAtt := attribute z:loc {$loc}
-            let $xsAtts := 
-                for $a in ($n|$elemD)/@* 
-                return f:lcomp_type_elemsRC($a, $options, $nsmap, $schemas)
-            return (
-                $nameAtt,
-                $occAtt,
-                $abstractAtt,
-                $isGlobalAtt,                
-                $typePropertyAtts,
-                $locAtt,            
-                $xsAtts
-            )
-        
-        (: contents of anonymous type :)
-        let $typeContent := 
-            $anomType/f:lcomp_typeContent(., $options, $nsmap, $schemas)/node()
-        
-        (: annotation :)
-        let $annoElem := 
-            $anno/f:lcomp_type_anno(., $options, $nsmap, $schemas)
-        
-        (: compose content :)
-        let $content_atts := 
-            let $raw := ($infoAtts, ($typeContent, $annoElem)[self::attribute()])
-            return 
-                for $a in $raw group by $name := node-name($a) return $a[1]
-        let $content_elems := ($annoElem, $typeContent)[self::element()]
-        
-        (: construct element descriptor :)
-        return         
-            element {$name} {
-                $content_atts,
-                $content_elems
-            }
-:)
 
     case attribute(name) return
         let $name := app:getNormalizedComponentName($n/.., $nsmap)
@@ -719,11 +657,13 @@ declare function f:lcomp_type_elemsRC($n as node(),
  : @return element locations and compositors representing the content of
  :     the complex type
  :) 
-declare function f:lcomp_elem($elem as element(xs:element),
+declare function f:lcomp_elem($elem as element(xs:element)?,
                               $options as element(options),
                               $nsmap as element(),
                               $schemas as element(xs:schema)+)
         as node()* {
+    if (not($elem)) then element _ELEM_ERROR {'ELEM_NOT_FOUND'} else
+    
     let $occAtt := app:getOccAtt($elem) return
     
     (: case 1) element declaration references a global element declaration :)
@@ -1018,10 +958,14 @@ declare function f:lcomp_group($groupName as xs:QName,
  : @param schemas the schema elements currently considered
  : @return attributes describing the group
  :)
-declare function f:lcomp_groupPropertyAtts($group as element(xs:group),
+declare function f:lcomp_groupPropertyAtts($group as element(xs:group)?,
                                            $nsmap as element(),
                                            $schemas as element(xs:schema)+)
         as attribute()* {
+    if (not($group)) then (
+        attribute z:_GROUP_ERROR {'GROUP_NOT_FOUND'}
+    ) else
+    
     let $groupName := app:getComponentName($group)        
     let $nname := app:normalizeQName($groupName, $nsmap)
     let $loc := app:getComponentLocator($group, $nsmap, $schemas)

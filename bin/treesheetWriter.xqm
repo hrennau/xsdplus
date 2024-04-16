@@ -26,6 +26,8 @@
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
          <param name="colRhs" type="xs:integer" default="60"/>
          <param name="report" type="xs:string*" fct_values="anno, tdesc, type, stype, ctype, sapiadoc, sapiadoc0, sapiadoc2"/>
+         <param name="reportMaxLen" type="xs:integer?"/> 
+         <param name="preferElemAnno" type="xs:boolean?" default="false"/>
          <param name="noLabel" type="xs:boolean?"/>
          <param name="lang" type="xs:string?"/>
          <pgroup name="in" minOccurs="1"/>    
@@ -99,6 +101,8 @@ declare function f:treesheetOp($request as element())
     let $namespacePrefixLength := tt:getParam($request, 'namespacePrefixLength')
     let $namespaceLabel := tt:getParam($request, 'namespaceLabel')
     let $noLabel := tt:getParam($request, 'noLabel')
+    let $reportMaxLen := tt:getParam($request, 'reportMaxLen')
+    let $preferElemAnno := tt:getParam($request, 'preferElemAnno')
     
     let $options :=
         <options withStypeTrees="false"
@@ -107,7 +111,9 @@ declare function f:treesheetOp($request as element())
                  sgroupStyle="{$sgroupStyle}"
                  sortAtts="{$sortAtts}"
                  sortElems="{$sortElems}"
-                 noLabel="{$noLabel}">{
+                 noLabel="{$noLabel}"
+                 reportMaxLen="{$reportMaxLen}"
+                 preferElemAnno="{$preferElemAnno}">{
             if (empty($namespacePrefixLength)) then () else
                 attribute namespacePrefixLength {$namespacePrefixLength},
             if (empty($namespaceLabel)) then () else
@@ -127,7 +133,8 @@ declare function f:treesheetOp($request as element())
                         else 'tdesc: (no type)'
                     else $n/(@z:typeDesc, @z:contentTypeDesc)[1] ! ('ty: '[not($options/@noLabel eq 'true')] || .)
                 }
-        case('anno') return anno:reportAnno(?, ?, $lang) ! ('anno: ' || .)
+        (: case('anno') return anno:reportAnno(?, ?, $lang) ! ('anno: ' || .) :) (: unclear - 'anno: ...' removed :)
+        case('anno') return anno:reportAnno(?, ?, $lang)
         case('sapiadoc') return anno:reportSapIaDoc(?, 'sapiadoc', ?, $lang)
         case('sapiadoc0') return anno:reportSapIaDoc(?, 'sapiadoc0', ?, $lang)
         case('sapiadoc2') return anno:reportSapIaDoc(?, 'sapiadoc2', ?, $lang)        

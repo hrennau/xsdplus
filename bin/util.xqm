@@ -219,6 +219,24 @@ declare function f:xq_indent($level as xs:integer)
    string-join(for $i in 1 to $level return '   ', '')
 };
 
+(:~
+ : Removes pretty print text nodes, enabling fresh indentation.
+ :)
+declare function f:prettyNode($node as node())
+        as node()? {
+    typeswitch($node)
+    case document-node() return
+        document {$node/node() ! f:prettyNode(.)}
+    case element() return
+        element {node-name($node)} {
+            $node/@* ! f:prettyNode(.),
+            $node/node() ! f:prettyNode(.)
+        }
+    case text() return
+        $node[not(../*) or matches(., '\S')]
+    default return $node
+};        
+
 
 
 

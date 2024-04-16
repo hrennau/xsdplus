@@ -132,6 +132,7 @@ declare function f:ltree($enames as element(nameFilter)*,
         as element(z:locationTrees) {                         
     
     let $comps := f:getComponents($enames, $tnames, $gnames, (), $ens, $tns, $gns, (), $global, $schemas)
+    let $_DEBUG := trace($comps/@name, 'COMPS: ')
     return f:ltree($comps, $options, $groupNormalization, $nsmap, $schemas)
 };     
 

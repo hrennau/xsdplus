@@ -151,7 +151,7 @@ declare function f:foldExpandGroup($accum as map(*),
             let $expansion1 := $newExpansion[1]
             let $group := <z:group>{app:updateOccAtt($expansion1, '')}</z:group>
             return
-                map:entry($newExpansionName, $group)
+                $newExpansionName ! map:entry(., $group)
         ))                
     return
         map{

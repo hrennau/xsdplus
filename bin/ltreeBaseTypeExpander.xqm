@@ -34,7 +34,7 @@ declare function f:expandTypeComps($typeComps as element()*)
                 for $typeComp in $typeComps
                 (: let $DUMMY := trace($typeComp, 'TYPE_COMP: ') :)
                 let $name := $typeComp/z:typeContent/@z:type/string()                                       
-                return map:entry($name, $typeComp)
+                return $name ! map:entry(., $typeComp)
             )
         let $accum :=
             map{'expanded': (), 

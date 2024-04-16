@@ -30,6 +30,8 @@ declare function f:reportAnno($n as node(),
                               $options as element(options)?, 
                               $lang as xs:string?) 
         as xs:string* {
+    let $maxLen := $options/@reportMaxLen[normalize-space()]/xs:integer(.)        
+    let $preferElemAnno := $options/@preferElemAnno/xs:boolean(.)
     let $docums := $n/z:_annotation_/z:_documentation_
     let $docum :=
         if (count($docums) le 1) then $docums
@@ -50,8 +52,22 @@ declare function f:reportAnno($n as node(),
                                     let $langs := distinct-values($docums/@xml:lang) => sort()
                                     return
                                         $docums[@xml:lang eq $langs[1]]
-    return 
-        if (not($docum)) then () else string-join($docum, ' ### ') ! normalize-space(.)
+    (: Filter documentation:
+       - if $preferElemAnno - use only element annotations, if present :)                                        
+    let $docum :=
+        if (count($docum) le 1) then $docum
+        else if ($preferElemAnno) then
+           let $elemDocum := $docum[../@z:annoParentName eq 'element']
+           return if ($elemDocum) then $elemDocum else $docum
+        else $docum
+    return
+        if (not($docum)) then () else 
+        
+        let $str := string-join($docum, ' ### ') ! normalize-space(.)
+        return
+            if (not($maxLen)) then $str
+            else if (string-length($str) le $maxLen) then $str
+            else substring($str, 1, $maxLen - 4)||' ...'
 };
 
 (:~

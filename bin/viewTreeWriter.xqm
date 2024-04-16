@@ -24,6 +24,8 @@
          <param name="sortAtts" type="xs:boolean?" default="false"/>
          <param name="sortElems" type="xs:boolean?" default="false"/>
          <param name="report" type="xs:string*" fct_values="anno, tdesc, type, stype, ctype, sapiadoc, sapiadoc0, sapiadoc2"/>
+         <param name="reportMaxLen" type="xs:integer?"/> 
+         <param name="preferElemAnno" type="xs:boolean?" default="false"/>         
          <param name="xsd" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
          <param name="xsds" type="docCAT*" sep="SC" pgroup="in"/>
          <param name="ltree" type="docFOX*" sep="SC" pgroup="in" fct_minDocCount="1"/>
@@ -90,9 +92,10 @@ declare function f:vtreeOp($request as element())
     let $report := tt:getParam($request, 'report')
     let $attRep := tt:getParam($request, 'attRep')    
     let $collapseElems := tt:getParam($request, 'collapseElems')
-    
-    let $withStypeTree := trace(if ($report = 'tdesc') then 'true' else 'false' , '___WITH_STYPETREE: ')
-    let $withAnnos := trace(if ($report = ('anno', 'sapiadoc', 'sapiadoc0', 'sapiadoc2')) then 'true' else 'false' , '___WITH ANNOS: ')
+    let $reportMaxLen := tt:getParam($request, 'reportMaxLen')
+    let $preferElemAnno := tt:getParam($request, 'preferElemAnno')
+    let $withStypeTree := if ($report = 'tdesc') then 'true' else 'false'
+    let $withAnnos := if ($report = ('anno', 'sapiadoc', 'sapiadoc0', 'sapiadoc2')) then 'true' else 'false'
     let $options :=
         <options withStypeTrees="{$withStypeTree}" 
                  withAnnos="{$withAnnos}"        
@@ -101,7 +104,9 @@ declare function f:vtreeOp($request as element())
                  sgroupStyle="{$sgroupStyle}"
                  sortAtts="{$sortAtts}"
                  sortElems="{$sortElems}"
-                 report="{$report}">{
+                 report="{$report}"
+                 reportMaxLen="{$reportMaxLen}"
+                 preferElemAnno="{$preferElemAnno}">{
             <collapseElems>{
                 $collapseElems
             }</collapseElems>                 
@@ -166,13 +171,16 @@ declare function f:ltree2VtreeRC($n as node(),
             for $a in $n/@* return f:ltree2VtreeRC($a, $options, $omap),
             for $c in $n/node() return f:ltree2VtreeRC($c, $options, $omap)
         )
+        let $contentAtts := $content/self::attribute()
+        let $contentChildren := $content except $contentAtts
         let $nsPrefixes := in-scope-prefixes($n)
         let $nsNodes :=
             for $p in $nsPrefixes return namespace {$p} {namespace-uri-for-prefix($p, $n)}
         return
             <z:tree>{
+                $contentAtts,
                 $nsNodes,
-                $content
+                $contentChildren
             }</z:tree>
 
     case element(z:_stypeTree_) return ()
@@ -295,6 +303,9 @@ declare function f:ltree2VtreeRC($n as node(),
         then attribute type {$n} 
         else ()
         
+    case attribute(compKind) return $n[parent::z:locationTree]        
+    case attribute(z:name) return $n[parent::z:locationTree]
+    case attribute(z:loc) return $n[parent::z:locationTree]
     case attribute() return ()
     default return $n
 };
